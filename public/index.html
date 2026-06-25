@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Fares Mansour Coffee — POS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,700&family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header id="appHeader">
+    <div class="header-left">
+      <div class="logo-mark">☕</div>
+      <div class="logo-text">
+        <span class="logo-primary">Fares Mansour</span>
+        <span class="logo-secondary">Coffee</span>
+      </div>
+    </div>
+    <nav id="mainNav">
+      <button class="nav-btn active" data-page="pos"><span class="nav-icon">🧾</span> POS</button>
+      <button class="nav-btn" data-page="catalog"><span class="nav-icon">📦</span> Catalog</button>
+      <button class="nav-btn" data-page="customers"><span class="nav-icon">👥</span> Customers</button>
+      <button class="nav-btn" data-page="orders"><span class="nav-icon">📋</span> Orders</button>
+    </nav>
+  </header>
+
+  <!-- PAGE: POS -->
+  <div id="page-pos" class="page active">
+    <div class="pos-layout">
+      <div class="pos-left">
+
+        <section class="card">
+          <div class="card-label">Customer Info</div>
+          <div class="form-row two-col">
+            <div class="field"><label for="custName">Full Name *</label><input id="custName" type="text" placeholder="e.g. Ahmed Hassan"/></div>
+            <div class="field"><label for="custMobile">Mobile Number</label><input id="custMobile" type="tel" placeholder="+20 1XX XXX XXXX"/></div>
+          </div>
+          <div class="form-row one-col">
+            <div class="field"><label for="custAddr">Address</label><textarea id="custAddr" placeholder="Street, Area, City…"></textarea></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-label">Coffee Selection</div>
+          <div class="catalog-grid" id="catalogGrid"><p class="muted" style="padding:2rem;text-align:center">Loading catalog…</p></div>
+        </section>
+
+        <section class="card">
+          <div class="card-label">Order Settings</div>
+          <div class="form-row two-col">
+            <div class="field">
+              <label>Payment Method</label>
+              <div class="pill-group">
+                <button class="pill active" data-val="Cash">💵 Cash</button>
+                <button class="pill" data-val="Credit">💳 Credit</button>
+                <button class="pill" data-val="Instapay">📱 Instapay</button>
+              </div>
+            </div>
+            <div class="field"><label for="taxRate">Tax Rate (%)</label><input id="taxRate" type="number" value="14" min="0" max="100" step="0.5"/></div>
+          </div>
+          <div class="form-row one-col">
+            <div class="field"><label for="orderNotes">Notes</label><input id="orderNotes" type="text" placeholder="Any special instructions…"/></div>
+          </div>
+        </section>
+
+      </div>
+
+      <aside class="pos-right">
+        <div class="cart-header">
+          <div><h2 class="cart-title">Current Order</h2><p class="cart-date" id="cartDate"></p></div>
+          <span class="invoice-badge" id="invoiceBadge">—</span>
+        </div>
+        <div class="cart-items" id="cartItems">
+          <div class="cart-empty"><div class="empty-icon">☕</div><p>No items selected</p><small>Choose coffee from the grid</small></div>
+        </div>
+        <div class="cart-totals" id="cartTotals" style="display:none">
+          <div class="total-row"><span class="tl">Total Weight</span><span class="tv" id="totalWeight">0.000 kg</span></div>
+          <div class="total-row"><span class="tl">Subtotal</span><span class="tv" id="subtotalVal">EGP 0.00</span></div>
+          <div class="total-row"><span class="tl">Tax (<span id="taxPctDisplay">14</span>%)</span><span class="tv" id="taxVal">EGP 0.00</span></div>
+          <div class="total-row grand"><span class="tl">TOTAL</span><span class="tv" id="grandVal">EGP 0.00</span></div>
+        </div>
+        <div class="cart-actions">
+          <button class="btn btn-primary" id="btnSaveOrder">💾 Save &amp; Generate Receipt</button>
+          <button class="btn btn-ghost"   id="btnClearOrder">🗑 Clear Order</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- PAGE: CATALOG -->
+  <div id="page-catalog" class="page">
+    <div class="inner-page">
+      <section class="card">
+        <div class="card-label">Add New Item to Catalog</div>
+        <div class="form-row three-col">
+          <div class="field"><label for="newItemNameAr">Name (Arabic)</label><input id="newItemNameAr" type="text" placeholder="حبشي هرهري" dir="rtl"/></div>
+          <div class="field"><label for="newItemNameEn">Name (English)</label><input id="newItemNameEn" type="text" placeholder="Ethiopian Harari"/></div>
+          <div class="field"><label for="newItemType">Type</label>
+            <select id="newItemType"><option value="coffee">☕ Coffee Bean</option><option value="package">📦 Package</option><option value="ingredient">🧂 Ingredient</option></select>
+          </div>
+        </div>
+        <div class="form-row three-col">
+          <div class="field"><label for="newItemPrice">Price (EGP per unit)</label><input id="newItemPrice" type="number" min="0" step="1" placeholder="440"/></div>
+          <div class="field"><label for="newItemUnit">Unit</label>
+            <select id="newItemUnit"><option value="kg">kg</option><option value="g">g</option><option value="piece">piece</option><option value="pack">pack</option></select>
+          </div>
+          <div class="field" style="display:flex;align-items:flex-end"><button class="btn btn-primary" id="btnAddItem" style="width:100%">＋ Add Item</button></div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-label">Current Catalog</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Arabic Name</th><th>English Name</th><th>Type</th><th>Price</th><th>Unit</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="catalogTableBody"><tr><td colspan="8" class="table-empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- PAGE: CUSTOMERS -->
+  <div id="page-customers" class="page">
+    <div class="inner-page">
+      <div class="stats-row" id="customerStats"></div>
+      <section class="card">
+        <div class="card-label">Customer Database</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Name</th><th>Mobile</th><th>Address</th><th>Orders</th><th>Total Spent</th><th>Since</th></tr></thead>
+            <tbody id="customerTableBody"><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- PAGE: ORDERS -->
+  <div id="page-orders" class="page">
+    <div class="inner-page">
+      <div class="stats-row" id="orderStats"></div>
+      <section class="card">
+        <div class="card-label">Order History</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th>Weight</th><th>Total</th><th>Payment</th><th>Receipt</th></tr></thead>
+            <tbody id="orderTableBody"><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- RECEIPT MODAL (Name / Address / Mobile / Weight / Total ONLY) -->
+  <div class="modal-overlay" id="receiptOverlay">
+    <div class="modal">
+      <button class="modal-close" id="btnCloseModal">✕</button>
+      <div id="printArea"><div class="receipt-paper" id="receiptContent"></div></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" onclick="window.print()">🖨 Print Receipt</button>
+        <button class="btn btn-ghost" id="btnCloseModal2">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE: FAB + Bottom nav -->
+  <button id="cartFab" class="cart-fab" aria-label="Open cart">🛒<span class="cart-fab-badge" id="cartFabBadge" data-count="0">0</span></button>
+  <nav id="bottomNav" class="bottom-nav">
+    <button class="bottom-nav-btn active" data-page="pos"><span>🧾</span><span>POS</span></button>
+    <button class="bottom-nav-btn" data-page="catalog"><span>📦</span><span>Catalog</span></button>
+    <button class="bottom-nav-btn" data-page="customers"><span>👥</span><span>Customers</span></button>
+    <button class="bottom-nav-btn" data-page="orders"><span>📋</span><span>Orders</span></button>
+  </nav>
+
+  <div id="toastEl"></div>
+
+  <!-- Scripts: db → catalog → app -->
+  <script src="/js/db.js"></script>
+  <script src="/js/catalog.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
