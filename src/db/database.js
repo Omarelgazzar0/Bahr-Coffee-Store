@@ -5,15 +5,22 @@
 // Zero native dependencies — works on any platform without build tools.
 //
 // Persistence: database is kept in memory as a Uint8Array and written
-// to data/fares_mansour.db after every write operation.
+// to disk after every write operation.
+//
+// DB path resolution (in order):
+//   1. DB_PATH env variable  → set this on Render to a persistent disk path
+//   2. ./data/bahr_coffee.db → default for local development
 // ═══════════════════════════════════════════════════════════════════
 'use strict';
 
 const fs   = require('fs');
 const path = require('path');
 
-const DB_DIR  = path.join(__dirname, '../../data');
-const DB_FILE = path.join(DB_DIR, 'fares_mansour.db');
+// On Render: set DB_PATH=/var/data/bahr_coffee.db (persistent disk mount)
+// Locally:   falls back to ./data/bahr_coffee.db
+const DB_FILE = process.env.DB_PATH
+  || path.join(__dirname, '../../data', 'bahr_coffee.db');
+const DB_DIR  = path.dirname(DB_FILE);
 
 let _db  = null;
 let _SQL = null;

@@ -44,12 +44,12 @@ app.use((err, req, res, next) => {
 // ── Start ─────────────────────────────────────────────────────────
 async function start() {
   await db.init();
-  app.listen(PORT, () => {
-    console.log('\n☕  Fares Mansour Coffee POS');
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log('\n☕  Bahr Coffee Store POS');
     console.log('   ─────────────────────────────');
-    console.log(`   http://localhost:${PORT}`);
-    console.log('   Database → data/fares_mansour.db');
-    console.log('   Ctrl+C to stop\n');
+    console.log(`   Running on port ${PORT}`);
+    console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log('   Database → data/bahr_coffee.db\n');
   });
 }
 
