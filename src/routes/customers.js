@@ -25,7 +25,7 @@ router.get('/:id', (req, res) => {
 
   row.orders = db.all(`
     SELECT o.id, o.invoice, o.date, o.payment, o.total, o.created_at,
-           COALESCE(SUM(oi.quantity), 0) AS total_weight
+           COALESCE(SUM(CASE WHEN oi.unit = 'kg' THEN oi.quantity ELSE 0 END), 0) AS total_weight
     FROM orders o
     JOIN order_items oi ON oi.order_id = o.id
     WHERE o.customer_id = ?
