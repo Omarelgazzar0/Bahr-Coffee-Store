@@ -127,7 +127,15 @@
     <div class="inner-page">
       <div class="stats-row" id="customerStats"></div>
       <section class="card">
-        <div class="card-label">Customer Database</div>
+        <div class="card-label">
+          Customer Database
+          <a href="/api/export/excel"
+             class="btn btn-primary btn-sm"
+             style="margin-left:auto;text-decoration:none;display:inline-flex;align-items:center;gap:.35rem;width:auto"
+             download>
+            📥 Export to Excel
+          </a>
+        </div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>#</th><th>Name</th><th>Mobile</th><th>Address</th><th>Orders</th><th>Total Spent</th><th>Since</th></tr></thead>
@@ -143,7 +151,17 @@
     <div class="inner-page">
       <div class="stats-row" id="orderStats"></div>
       <section class="card">
-        <div class="card-label">Order History</div>
+        <div class="card-label">
+          Order History
+          <!-- Export to Excel button — downloads full workbook -->
+          <a href="/api/export/excel"
+             id="btnExportExcel"
+             class="btn btn-primary btn-sm"
+             style="margin-left:auto;text-decoration:none;display:inline-flex;align-items:center;gap:.35rem;width:auto"
+             download>
+            📥 Export to Excel
+          </a>
+        </div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th>Weight</th><th>Total</th><th>Payment</th><th>Receipt</th></tr></thead>

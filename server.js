@@ -29,6 +29,7 @@ app.use('/api/catalog',   require('./src/routes/catalog'));
 app.use('/api/customers', require('./src/routes/customers'));
 app.use('/api/orders',    require('./src/routes/orders'));
 app.use('/api/stats',     require('./src/routes/stats'));
+app.use('/api/export',    require('./src/routes/export'));
 
 // ── Serve SPA for all non-API routes ─────────────────────────────
 app.get('*', (req, res) => {
