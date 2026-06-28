@@ -107,6 +107,7 @@ const Sheets = (() => {
 
     _token    = data.access_token;
     _tokenExp = Date.now() + (data.expires_in * 1000);
+    console.log('[Sheets] Token acquired, expires in', data.expires_in, 's');
     return _token;
   }
 
@@ -214,6 +215,7 @@ const Sheets = (() => {
 
   async function _setup() {
     // 1. Get list of existing sheet tabs
+    console.log('[Sheets] Fetching spreadsheet metadata…');
     const res  = await fetch(`${_base}?fields=sheets.properties.title`, { headers: await _hdrs() });
     const data = await res.json();
     if (data.error) throw new Error('Spreadsheet access denied: ' + data.error.message);
@@ -221,17 +223,19 @@ const Sheets = (() => {
     const have = (data.sheets || []).map(s => s.properties.title);
     const need = Object.values(SH);
     const miss = need.filter(n => !have.includes(n));
+    console.log('[Sheets] Tabs found:', have, '| Need to create:', miss);
 
     // 2. Create any missing tabs in one batchUpdate call
     if (miss.length) {
+      console.log('[Sheets] Creating tabs:', miss);
       await fetch(`${_base}:batchUpdate`, {
         method: 'POST', headers: await _hdrs(),
         body: JSON.stringify({
           requests: miss.map(title => ({ addSheet: { properties: { title } } }))
         }),
       });
-      // Give the API a moment to register the new tabs
       await new Promise(r => setTimeout(r, 1500));
+      console.log('[Sheets] Tabs created.');
     }
 
     // 3. Write headers to any tab that is still empty (check A1 only)
@@ -241,16 +245,23 @@ const Sheets = (() => {
         const rows = await _get(sh, 'A1:A1');
         empty = !rows.length || !rows[0]?.length;
       } catch (_) { empty = true; }
-
-      if (empty) await _append(sh, [HEADERS[sh]]);
+      console.log('[Sheets]', sh, '— empty:', empty);
+      if (empty) {
+        console.log('[Sheets] Writing headers to', sh);
+        await _append(sh, [HEADERS[sh]]);
+      }
     }
 
     // 4. Seed catalog rows if only the header row exists
     let catRows = [];
     try { catRows = await _get(SH.CATALOG); } catch (_) {}
+    console.log('[Sheets] Catalog rows (incl. header):', catRows.length);
     if (catRows.length <= 1) {
+      console.log('[Sheets] Seeding default catalog items…');
       await _append(SH.CATALOG, CONFIG.DEFAULT_CATALOG);
+      console.log('[Sheets] Catalog seeded.');
     }
+    console.log('[Sheets] _setup complete.');
   }
 
 
@@ -264,8 +275,11 @@ const Sheets = (() => {
 
     // Authenticate, create sheet structure, seed defaults
     async init() {
+      console.log('[Sheets] Getting OAuth token…');
       await _getToken();   // fast-fail on auth errors
+      console.log('[Sheets] Token OK. Running setup…');
       await _setup();
+      console.log('[Sheets] Setup complete.');
       this.ready = true;
       console.log('[Sheets] Ready. Spreadsheet:', SID);
     },

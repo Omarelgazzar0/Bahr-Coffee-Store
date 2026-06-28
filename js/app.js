@@ -34,42 +34,87 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ── Show loading screen ────────────────────────────────────────
   _setLoading(true, 'Connecting to Google Sheets…');
 
+  // Wrap any single promise with a timeout so we never hang silently
+  function withTimeout(promise, ms, label) {
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`Timed out after ${ms/1000}s at: ${label}`)), ms)
+    );
+    return Promise.race([promise, timeout]);
+  }
+
   try {
-    _setLoading(true, 'Signing in with service account…');
-    await Sheets.init();
-    _setLoading(true, 'Loading catalog…');
-    await Catalog.load();
+    _setLoading(true, 'Step 1 / 3 — Signing JWT…');
+    console.log('[App] Step 1: signing JWT and getting token…');
+    await withTimeout(Sheets.init(), 20000, 'Sheets.init()');
+    console.log('[App] Step 1 done — authenticated');
+
+    _setLoading(true, 'Step 2 / 3 — Loading catalog from Google Sheets…');
+    console.log('[App] Step 2: loading catalog…');
+    await withTimeout(Catalog.load(), 15000, 'Catalog.load()');
+    console.log('[App] Step 2 done — catalog loaded');
+
+    _setLoading(true, 'Step 3 / 3 — Starting POS…');
     _wireEvents();
     _setLoading(false);
+    console.log('[App] Step 3 done — POS ready');
 
     const dateEl=document.getElementById('cartDate');
     if(dateEl) dateEl.textContent=new Date().toLocaleDateString('en-EG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
     const badge=document.getElementById('invoiceBadge');
     if(badge) badge.textContent='FC-'+String(Date.now()).slice(-7);
 
-    console.log('[App] Bahr Coffee Store POS ready.');
+    console.log('[App] ✓ Bahr Coffee Store POS ready.');
   } catch(err) {
+    console.error('[App] FAILED:', err.message);
     _setLoading(false);
-    const isShareError = err.message.includes('403') || err.message.includes('permission') || err.message.includes('access');
-    const isApiError   = err.message.includes('404') || err.message.includes('API') || err.message.includes('disabled');
+    const msg = err.message || '';
+    const isShareError = msg.includes('403') || msg.includes('PERMISSION') || msg.includes('permission') || msg.includes('forbidden');
+    const isApiDisabled = msg.includes('disabled') || msg.includes('SERVICE_DISABLED');
+    const isTimeout = msg.includes('Timed out');
+    const isAuth = msg.includes('Auth failed') || msg.includes('invalid_grant') || msg.includes('unauthorized');
+
     document.body.innerHTML=`
       <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
                   background:#000;color:#fff;font-family:sans-serif;padding:2rem;text-align:center;gap:1rem">
         <div style="font-size:3rem">☕</div>
         <h2 style="color:#FF3B3B">Cannot connect to Google Sheets</h2>
-        <code style="background:#111;border:1px solid #333;padding:.5rem 1rem;border-radius:6px;color:#aaa;font-size:.8rem;max-width:500px;word-break:break-all">${esc(err.message)}</code>
-        ${isShareError ? `
-        <div style="background:#111;border:1px solid #333;border-radius:8px;padding:1.25rem;max-width:480px;text-align:left">
-          <p style="color:#fff;font-weight:700;margin-bottom:.75rem">⚠️ The service account needs Editor access:</p>
-          <p style="color:#888;font-size:.85rem;margin-bottom:.5rem">1. Open your Google Sheet</p>
-          <p style="color:#888;font-size:.85rem;margin-bottom:.5rem">2. Click <strong style="color:#fff">Share</strong></p>
-          <p style="color:#888;font-size:.85rem;margin-bottom:.5rem">3. Add: <code style="color:#fff;background:#222;padding:.1rem .4rem;border-radius:3px">bahr-coffee-pos@ancient-pipe-500714-t0.iam.gserviceaccount.com</code></p>
-          <p style="color:#888;font-size:.85rem">4. Set role to <strong style="color:#fff">Editor</strong> → Send</p>
-        </div>` : isApiError ? `
-        <div style="background:#111;border:1px solid #333;border-radius:8px;padding:1.25rem;max-width:480px;text-align:left">
-          <p style="color:#fff;font-weight:700;margin-bottom:.75rem">⚠️ Enable the Google Sheets API:</p>
-          <p style="color:#888;font-size:.85rem">Go to <a href="https://console.cloud.google.com/apis/library/sheets.googleapis.com?project=ancient-pipe-500714-t0" target="_blank" style="color:#fff">Google Cloud Console</a> and enable the Sheets API for project <code style="color:#aaa">ancient-pipe-500714-t0</code></p>
+        <code style="background:#111;border:1px solid #333;padding:.5rem 1rem;border-radius:6px;
+                     color:#aaa;font-size:.75rem;max-width:500px;word-break:break-all;display:block">${esc(msg)}</code>
+
+        ${isShareError || isTimeout ? `
+        <div style="background:#111;border:1px solid #FF3B3B;border-radius:8px;padding:1.25rem;max-width:460px;text-align:left">
+          <p style="color:#FF3B3B;font-weight:700;margin-bottom:.75rem">⚠️ Share the spreadsheet with the service account</p>
+          <p style="color:#888;font-size:.82rem;line-height:1.6">
+            1. Open your <a href="https://docs.google.com/spreadsheets/d/1WpzhVCLM3RIOaOIUt07ttbOtEJHE7lO8NJg6LYpFiAQ" target="_blank" style="color:#fff">Google Sheet</a><br/>
+            2. Click <strong style="color:#fff">Share</strong> (top right)<br/>
+            3. Add this email as <strong style="color:#fff">Editor</strong>:<br/>
+            <code style="color:#fff;background:#222;padding:.2rem .5rem;border-radius:3px;font-size:.75rem;display:block;margin-top:.4rem;word-break:break-all">bahr-coffee-pos@ancient-pipe-500714-t0.iam.gserviceaccount.com</code><br/>
+            4. Click <strong style="color:#fff">Send</strong> → then reload this page
+          </p>
         </div>` : ''}
+
+        ${isApiDisabled ? `
+        <div style="background:#111;border:1px solid #FF3B3B;border-radius:8px;padding:1.25rem;max-width:460px;text-align:left">
+          <p style="color:#FF3B3B;font-weight:700;margin-bottom:.75rem">⚠️ Google Sheets API is not enabled</p>
+          <p style="color:#888;font-size:.82rem">
+            Go to <a href="https://console.cloud.google.com/apis/library/sheets.googleapis.com?project=ancient-pipe-500714-t0" target="_blank" style="color:#fff">Google Cloud Console</a>
+            and enable the <strong style="color:#fff">Google Sheets API</strong> for project <code style="color:#aaa">ancient-pipe-500714-t0</code>
+          </p>
+        </div>` : ''}
+
+        ${isAuth ? `
+        <div style="background:#111;border:1px solid #FF3B3B;border-radius:8px;padding:1.25rem;max-width:460px;text-align:left">
+          <p style="color:#FF3B3B;font-weight:700;margin-bottom:.75rem">⚠️ Service account authentication failed</p>
+          <p style="color:#888;font-size:.82rem">The private key may be invalid or the Sheets API is not enabled for this project.</p>
+        </div>` : ''}
+
+        <button onclick="location.reload()"
+                style="padding:.75rem 2rem;background:#fff;color:#000;border:none;border-radius:6px;
+                       cursor:pointer;font-weight:700;font-size:.9rem;margin-top:.5rem">
+          🔄 Try Again
+        </button>
+        <p style="color:#444;font-size:.75rem">Open browser DevTools → Console for full error details</p>
+      </div>`;
         <button onclick="location.reload()"
                 style="padding:.75rem 2rem;background:#fff;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:.9rem">
           🔄 Try Again
