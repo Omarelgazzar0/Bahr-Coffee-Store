@@ -35,7 +35,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   _setLoading(true, 'Connecting to Google Sheets…');
 
   try {
+    _setLoading(true, 'Signing in with service account…');
     await Sheets.init();
+    _setLoading(true, 'Loading catalog…');
     await Catalog.load();
     _wireEvents();
     _setLoading(false);
@@ -48,16 +50,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('[App] Bahr Coffee Store POS ready.');
   } catch(err) {
     _setLoading(false);
+    const isShareError = err.message.includes('403') || err.message.includes('permission') || err.message.includes('access');
+    const isApiError   = err.message.includes('404') || err.message.includes('API') || err.message.includes('disabled');
     document.body.innerHTML=`
       <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
-                  background:#000;color:#fff;font-family:sans-serif;padding:2rem;text-align:center">
-        <div style="font-size:3rem;margin-bottom:1rem">☕</div>
-        <h2 style="color:#FF3B3B;margin-bottom:.75rem">Cannot connect to Google Sheets</h2>
-        <p style="color:#888;margin-bottom:1rem">${esc(err.message)}</p>
-        <p style="color:#555;font-size:.85rem">
-          Make sure the Google Sheets API is enabled and the service account<br/>
-          has Editor access to the spreadsheet.
-        </p>
+                  background:#000;color:#fff;font-family:sans-serif;padding:2rem;text-align:center;gap:1rem">
+        <div style="font-size:3rem">☕</div>
+        <h2 style="color:#FF3B3B">Cannot connect to Google Sheets</h2>
+        <code style="background:#111;border:1px solid #333;padding:.5rem 1rem;border-radius:6px;color:#aaa;font-size:.8rem;max-width:500px;word-break:break-all">${esc(err.message)}</code>
+        ${isShareError ? `
+        <div style="background:#111;border:1px solid #333;border-radius:8px;padding:1.25rem;max-width:480px;text-align:left">
+          <p style="color:#fff;font-weight:700;margin-bottom:.75rem">⚠️ The service account needs Editor access:</p>
+          <p style="color:#888;font-size:.85rem;margin-bottom:.5rem">1. Open your Google Sheet</p>
+          <p style="color:#888;font-size:.85rem;margin-bottom:.5rem">2. Click <strong style="color:#fff">Share</strong></p>
+          <p style="color:#888;font-size:.85rem;margin-bottom:.5rem">3. Add: <code style="color:#fff;background:#222;padding:.1rem .4rem;border-radius:3px">bahr-coffee-pos@ancient-pipe-500714-t0.iam.gserviceaccount.com</code></p>
+          <p style="color:#888;font-size:.85rem">4. Set role to <strong style="color:#fff">Editor</strong> → Send</p>
+        </div>` : isApiError ? `
+        <div style="background:#111;border:1px solid #333;border-radius:8px;padding:1.25rem;max-width:480px;text-align:left">
+          <p style="color:#fff;font-weight:700;margin-bottom:.75rem">⚠️ Enable the Google Sheets API:</p>
+          <p style="color:#888;font-size:.85rem">Go to <a href="https://console.cloud.google.com/apis/library/sheets.googleapis.com?project=ancient-pipe-500714-t0" target="_blank" style="color:#fff">Google Cloud Console</a> and enable the Sheets API for project <code style="color:#aaa">ancient-pipe-500714-t0</code></p>
+        </div>` : ''}
+        <button onclick="location.reload()"
+                style="padding:.75rem 2rem;background:#fff;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:.9rem">
+          🔄 Try Again
+        </button>
+      </div>`;
         <button onclick="location.reload()" style="margin-top:1.5rem;padding:.75rem 2rem;background:#fff;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:700">
           Try Again
         </button>

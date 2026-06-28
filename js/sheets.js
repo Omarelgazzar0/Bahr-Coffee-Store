@@ -190,26 +190,43 @@ const Sheets = (() => {
     // Get existing sheet titles
     const res  = await fetch(`${_base}?fields=sheets.properties.title`, { headers: await _headers() });
     const data = await res.json();
+    if (data.error) throw new Error('Cannot access spreadsheet: ' + data.error.message);
+
     const have = (data.sheets||[]).map(s => s.properties.title);
     const need = Object.values(SH);
     const miss = need.filter(n => !have.includes(n));
 
+    // Create any missing sheet tabs
     if (miss.length) {
-      await fetch(`${_base}:batchUpdate`, {
+      const addRes = await fetch(`${_base}:batchUpdate`, {
         method:'POST', headers: await _headers(),
         body: JSON.stringify({ requests: miss.map(title => ({ addSheet: { properties: { title } } })) })
       });
+      if (!addRes.ok) {
+        const e = await addRes.json();
+        throw new Error('Failed to create sheets: ' + (e.error?.message || 'unknown'));
+      }
+      // Wait 2s for Sheets API to register the new tabs before reading them
+      await new Promise(r => setTimeout(r, 2000));
     }
 
-    // Write headers to empty sheets
+    // Write headers to any sheet that has no rows yet.
+    // Wrap in try/catch — a brand-new empty sheet throws on range read.
     for (const sh of need) {
-      const rows = await _get(sh, 'A1:Z1');
-      if (!rows.length) await _append(sh, [HEADERS[sh]]);
+      let hasHeader = false;
+      try {
+        const rows = await _get(sh, 'A1:A1');
+        hasHeader = rows.length > 0 && rows[0].length > 0;
+      } catch (_) {
+        hasHeader = false; // empty sheet — write headers
+      }
+      if (!hasHeader) await _append(sh, [HEADERS[sh]]);
     }
 
-    // Seed catalog if only header row exists
-    const cat = await _get(SH.CATALOG);
-    if (cat.length <= 1) await _append(SH.CATALOG, CONFIG.DEFAULT_CATALOG);
+    // Seed catalog if only the header row exists (or sheet was just created)
+    let catRows = [];
+    try { catRows = await _get(SH.CATALOG); } catch (_) {}
+    if (catRows.length <= 1) await _append(SH.CATALOG, CONFIG.DEFAULT_CATALOG);
   }
 
   // ════════════════════════════════════════════════════════════════
