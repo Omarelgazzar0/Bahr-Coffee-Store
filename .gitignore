@@ -1,21 +1,16 @@
-# Dependencies
+# Never commit node_modules or database files
 node_modules/
-
-# Database file (contains real customer data — never commit this)
 data/
-
-# Logs
-*.log
-npm-debug.log*
+*.db
 
 # OS files
 .DS_Store
 Thumbs.db
 
-# Environment variables
+# Environment files
 .env
 .env.local
 
-# Editor directories
+# Editor
 .vscode/
 .idea/
