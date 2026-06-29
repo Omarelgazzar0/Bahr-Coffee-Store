@@ -32,13 +32,13 @@
 
 /* ── 1. DESIGN TOKENS ──────────────────────────────────────────────── */
 :root {
-  --ink:        #000000;
+  --ink:        #FFFFFF;
   --deep:       #0A0A0A;
   --surface:    #111111;
   --border:     #222222;
   --border-lt:  #333333;
 
-  --white:      #FFFFFF;
+  --white:      #000000;
   --white-dim:  rgba(255, 255, 255, 0.06);
   --white-glow: rgba(255, 255, 255, 0.12);
   --white-hi:   rgba(255, 255, 255, 0.85);
@@ -96,7 +96,7 @@
 html { font-size: 14px; scroll-behavior: smooth; }
 
 body {
-  background: var(--white);
+  background: var(--ink);
   color: var(--text);
   font-family: var(--font-ui);
   min-height: 100vh;
