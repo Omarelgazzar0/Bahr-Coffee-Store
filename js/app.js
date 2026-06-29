@@ -115,15 +115,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         </button>
         <p style="color:#444;font-size:.75rem">Open browser DevTools → Console for full error details</p>
       </div>`;
-        <button onclick="location.reload()"
-                style="padding:.75rem 2rem;background:#fff;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:.9rem">
-          🔄 Try Again
-        </button>
-      </div>`;
-        <button onclick="location.reload()" style="margin-top:1.5rem;padding:.75rem 2rem;background:#fff;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:700">
-          Try Again
-        </button>
-      </div>`;
   }
 
   function _setLoading(show, msg='') {
