@@ -96,7 +96,7 @@
 html { font-size: 14px; scroll-behavior: smooth; }
 
 body {
-  background: var(--ink);
+  background: var(--white);
   color: var(--text);
   font-family: var(--font-ui);
   min-height: 100vh;
