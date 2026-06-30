@@ -772,6 +772,15 @@ tbody tr:last-child td { border-bottom: none; }
   .bottom-nav { display: grid; }
   .cart-fab   { display: flex; }
 
+  /* Respect the home-indicator safe area on notched iPhones */
+  .bottom-nav {
+    height: calc(60px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .cart-fab {
+    bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+
   .pos-layout {
     grid-template-columns: 1fr;
     height: calc(100vh - 54px);
@@ -791,6 +800,7 @@ tbody tr:last-child td { border-bottom: none; }
     transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
     max-height: 85vh;
     box-shadow: 0 -8px 40px rgba(0,0,0,0.6);
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   #page-pos.cart-open .pos-right { transform: translateY(0); }
@@ -811,7 +821,7 @@ tbody tr:last-child td { border-bottom: none; }
 
   .modal      { width: calc(100vw - 2rem); max-width: 480px; margin: var(--gap-md); max-height: 88vh; }
 
-  #toastEl    { left: 1rem; right: 1rem; bottom: 5rem; max-width: none; text-align: center;
+  #toastEl    { left: 1rem; right: 1rem; bottom: calc(5rem + env(safe-area-inset-bottom)); max-width: none; text-align: center;
                 transform: translateY(150%); }
   #toastEl.visible { transform: translateY(0); }
 }
@@ -838,6 +848,30 @@ tbody tr:last-child td { border-bottom: none; }
   .cart-totals { padding: 0.75rem var(--gap-md); }
   .cart-actions { padding: 0.75rem; }
   .btn { padding: 0.85rem 1rem; font-size: 0.78rem; }
+
+  /* Card label rows (e.g. "Order History" + Export button) wrap
+     onto two lines instead of squashing on narrow screens */
+  .card-label {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+  .card-label::after {
+    /* hide the trailing divider line when wrapped — looks cleaner */
+    flex-basis: 100%;
+    height: 0;
+  }
+  .export-csv-btn {
+    margin-left: 0 !important;
+    width: 100% !important;
+    justify-content: center;
+  }
+
+  /* Tighter table padding so tables don't force horizontal scroll
+     as aggressively on narrow phones */
+  thead th, tbody td { padding: 0.5rem 0.6rem; font-size: 0.78rem; }
+
+  /* Inputs/buttons at least 16px font — prevents iOS auto-zoom on focus */
+  input, select, textarea { font-size: 16px; }
 }
 
 /* XS — very small phones */
