@@ -821,7 +821,7 @@ tbody tr:last-child td { border-bottom: none; }
 
   .modal      { width: calc(100vw - 2rem); max-width: 480px; margin: var(--gap-md); max-height: 88vh; }
 
-  #toastEl    { left: 1rem; right: 1rem; bottom: calc(5rem + env(safe-area-inset-bottom)); max-width: none; text-align: center;
+  #toastEl    { left: 1rem; right: 1rem; bottom: 0.5rem; max-width: none; text-align: center;
                 transform: translateY(150%); }
   #toastEl.visible { transform: translateY(0); }
 }
