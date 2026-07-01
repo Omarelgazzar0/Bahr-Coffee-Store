@@ -32,13 +32,13 @@
 
 /* ── 1. DESIGN TOKENS ──────────────────────────────────────────────── */
 :root {
-  --ink:        #FFFFFF;
+  --ink:        #000000;
   --deep:       #0A0A0A;
   --surface:    #111111;
   --border:     #222222;
   --border-lt:  #333333;
 
-  --white:      #000000;
+  --white:      #FFFFFF;
   --white-dim:  rgba(255, 255, 255, 0.06);
   --white-glow: rgba(255, 255, 255, 0.12);
   --white-hi:   rgba(255, 255, 255, 0.85);
