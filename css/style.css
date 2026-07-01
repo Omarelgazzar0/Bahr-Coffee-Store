@@ -266,6 +266,17 @@ textarea { resize: vertical; min-height: 62px; }
 input[type="number"] { font-family: var(--font-mono); }
 select option { background: var(--deep); }
 
+.tax-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--gap-sm);
+}
+
+.tax-fields > div {
+    display: flex;
+    flex-direction: column;
+}
+
 
 /* ── 9. PAYMENT PILLS ──────────────────────────────────────────────── */
 .pill-group { display: flex; gap: 0.4rem; flex-wrap: wrap; }

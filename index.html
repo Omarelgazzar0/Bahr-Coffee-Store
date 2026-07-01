@@ -64,10 +64,22 @@
                                     <button class="pill" data-val="Instapay">📱 Instapay</button>
                                 </div>
                             </div>
+
+
                             <div class="field">
-                                <label for="taxRate">Tax Rate (%)</label><input id="taxRate" type="number" value="20" min="0" max="100" step="0.1"/>
-                                <label for="taxRate">Tax Rate (EGP)</label><input id="taxRateEGP" type="number" value="30" min="0" max="100" step="0.1"/>
+                                <div class="tax-fields">
+                                    <div>
+                                        <label for="taxRate">Rate (%)</label>
+                                        <input id="taxRate" type="number" value="20" min="0" max="100" step="0.1"/>
+                                    </div>
+
+                                    <div>
+                                        <label for="taxRateEGP">Amount (EGP)</label>
+                                        <input id="taxRateEGP" type="number" value="30" min="0" step="0.1"/>
+                                    </div>
+                                </div>
                             </div>
+
                         </div>
                         <div class="form-row one-col">
                             <div class="field"><label for="orderNotes">Notes</label><input id="orderNotes" type="text" placeholder="Any special instructions…"/></div>
