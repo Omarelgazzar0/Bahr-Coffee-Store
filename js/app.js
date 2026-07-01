@@ -338,7 +338,7 @@ class AppController {
     });
 
     const badge = document.getElementById('invoiceBadge');
-    if (badge) badge.textContent = 'FC-' + String(Date.now()).slice(-7);
+    if (badge) badge.textContent = 'BC-' + String(Date.now()).slice(-7);
   }
 
   // ── Event wiring ───────────────────────────────────────────────
@@ -386,7 +386,7 @@ class AppController {
   }
 
   _renderCart() {
-    const taxRate = parseFloat(document.getElementById('taxRate')?.value) || 14;
+    const taxRate = parseFloat(document.getElementById('taxRate')?.value) || 20;
     const lines   = Catalog.getCartItems();
     const totals  = Catalog.getCartTotals(taxRate);
 
@@ -445,7 +445,7 @@ class AppController {
     const mobile  = document.getElementById('custMobile')?.value.trim();
     const address = document.getElementById('custAddr')?.value.trim();
     const notes   = document.getElementById('orderNotes')?.value.trim();
-    const taxRate = parseFloat(document.getElementById('taxRate')?.value) || 14;
+    const taxRate = parseFloat(document.getElementById('taxRate')?.value) || 20;
     const payment = document.querySelector('.pill.active')?.dataset.val || 'Cash';
 
     if (!name) {
