@@ -603,7 +603,7 @@ class AppController {
       this.receipt.show({
         invoice: order.invoice, date: order.date,
         custName: order.customer_name, mobile: order.mobile, address: order.address,
-        taxRate: order.tax_rate, subtotal: order.subtotal, taxAmount: order.tax_amount,
+        
         grandTotal: order.total, totalKg: weight, payment: order.payment,
       });
     } catch (e) {
