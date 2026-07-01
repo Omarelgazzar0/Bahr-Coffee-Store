@@ -177,8 +177,10 @@ class ReceiptModal {
       <hr class="rp-divider"/>
       <div class="rp-summary">
         <div class="rp-summary-row"><span class="sk">Total Weight</span><span class="sv mono">${Number(totalKg).toFixed(3)} kg</span></div>
-        <div class="rp-summary-row"><span class="sk">Subtotal</span><span class="sv mono">EGP ${Number(subtotal).toFixed(2)}</span></div>
-        <div class="rp-summary-row"><span class="sk">Tax (${taxRate}%)</span><span class="sv mono">EGP ${Number(taxAmount).toFixed(2)}</span></div>
+        <!--
+            <div class="rp-summary-row"><span class="sk">Subtotal</span><span class="sv mono">EGP ${Number(subtotal).toFixed(2)}</span></div>
+            <div class="rp-summary-row"><span class="sk">Tax (${taxRate}%)</span><span class="sv mono">EGP ${Number(taxAmount).toFixed(2)}</span></div>
+        -->
         <div class="rp-summary-row final"><span class="sk">TOTAL DUE</span><span class="sv mono">EGP ${Number(grandTotal).toFixed(2)}</span></div>
       </div>
       <div class="rp-footer">☕ Thank you for choosing Bahr Coffee Store ☕<br/>Rise &amp; Grind — Every Cup Counts</div>`;
@@ -603,7 +605,7 @@ class AppController {
       this.receipt.show({
         invoice: order.invoice, date: order.date,
         custName: order.customer_name, mobile: order.mobile, address: order.address,
-        
+        taxRate: order.tax_rate, subtotal: order.subtotal, taxAmount: order.tax_amount,
         grandTotal: order.total, totalKg: weight, payment: order.payment,
       });
     } catch (e) {
