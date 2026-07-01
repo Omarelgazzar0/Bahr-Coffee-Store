@@ -352,7 +352,7 @@ class SheetsAPI {
     const subtotal  = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const taxAmount = subtotal * (taxRate / 100);
     const total     = subtotal + taxAmount;
-    const invoice   = 'FC-' + String(Date.now()).slice(-7);
+    const invoice   = 'BC-' + String(Date.now()).slice(-7);
     const date      = new Date().toISOString().split('T')[0];
 
     const orders  = await this.getAllOrders();

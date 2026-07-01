@@ -26,7 +26,7 @@ class Cart {
 
   /** Step size for +/- buttons, based on the item's unit. */
   static stepFor(unit) {
-    const steps = { kg: 0.025, g: 25, piece: 1, pack: 1 };
+    const steps = { kg: 0.010, g: 10, piece: 1, pack: 1 };
     return steps[unit] ?? 1;
   }
 
