@@ -159,6 +159,7 @@ class CatalogManager {
   _cardHTML(item) {
     const qty  = this.cart.get(item.id);
     const step = Cart.stepFor(item.unit);
+    const val  = qty > 0 ? (item.unit === 'kg' ? qty.toFixed(3) : qty) : '';
 
     return `
       <div class="catalog-card ${qty > 0 ? 'selected' : ''}"
@@ -174,22 +175,36 @@ class CatalogManager {
           <span class="qty-label">Qty (${item.unit})</span>
           <div class="qty-controls">
             <button class="qty-btn" onclick="Catalog.adjustQuantity(${item.id}, -${step})">−</button>
-            <span class="qty-display" id="qty-${item.id}">${this._formatQty(qty, item.unit)}</span>
+            <input class="qty-input" id="qty-${item.id}"
+                   type="number" min="0" step="${step}" placeholder="0" value="${val}"
+                   oninput="Catalog.setQuantity(${item.id}, this.value)"/>
             <button class="qty-btn" onclick="Catalog.adjustQuantity(${item.id}, ${step})">+</button>
           </div>
         </div>
       </div>`;
   }
 
+  /** Set an absolute quantity from manual input. */
+  setQuantity(itemId, rawValue) {
+    const qty = parseFloat(rawValue) || 0;
+    if (qty <= 0) this.cart.remove(itemId);
+    else          this.cart._quantities.set(itemId, Math.round(qty * 10000) / 10000);
+    const cardEl = document.getElementById('card-' + itemId);
+    if (cardEl) cardEl.classList.toggle('selected', qty > 0);
+    App?.onCartChange();
+  }
+
   /** Update just one card's quantity display without rebuilding the grid. */
   _refreshCard(itemId) {
-    const item = this._items.find(i => i.id === itemId);
-    const qty  = this.cart.get(itemId);
-
-    const qtyEl  = document.getElementById('qty-' + itemId);
+    const item   = this._items.find(i => i.id === itemId);
+    const qty    = this.cart.get(itemId);
+    const input  = document.getElementById('qty-' + itemId);
     const cardEl = document.getElementById('card-' + itemId);
 
-    if (qtyEl)  qtyEl.textContent = this._formatQty(qty, item?.unit);
+    if (input) {
+      const newVal = qty > 0 ? (item?.unit === 'kg' ? qty.toFixed(3) : String(qty)) : '';
+      if (input.value !== newVal) input.value = newVal;
+    }
     if (cardEl) cardEl.classList.toggle('selected', qty > 0);
   }
 
