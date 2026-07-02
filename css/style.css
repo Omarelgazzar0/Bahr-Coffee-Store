@@ -936,6 +936,133 @@ tbody tr:last-child td { border-bottom: none; }
 }
 
 
+/* ── 25.5. PRESETS ─────────────────────────────────────────────────── */
+.presets-container {
+	display: flex;
+	flex-direction: column;
+	gap: var(--gap-md);
+	margin-top: 0.5rem;
+}
+
+.preset-create-form {
+	display: flex;
+	gap: var(--gap-sm);
+	align-items: center;
+}
+
+.preset-create-form input {
+	flex: 1;
+}
+
+.preset-create-form button {
+	width: auto;
+	white-space: nowrap;
+	padding: 0.55rem 1.2rem;
+}
+
+.presets-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+	gap: var(--gap-sm);
+}
+
+.preset-card {
+	background: var(--deep);
+	border: 1px solid var(--border);
+	border-radius: var(--r-md);
+	padding: var(--gap-md);
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	transition: all 0.2s var(--ease);
+	position: relative;
+	overflow: hidden;
+}
+
+.preset-card::before {
+	content: '';
+	position: absolute; top: 0; left: 0; right: 0; height: 2px;
+	background: var(--border-lt);
+	border-radius: var(--r-md) var(--r-md) 0 0;
+	transition: background 0.2s;
+}
+
+.preset-card:hover {
+	border-color: var(--border-lt);
+	transform: translateY(-1px);
+}
+
+.preset-card-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: var(--gap-sm);
+	margin-bottom: 0.5rem;
+}
+
+.preset-name {
+	font-family: var(--font-ui);
+	font-size: 0.9rem;
+	font-weight: 700;
+	color: var(--white);
+	line-height: 1.2;
+}
+
+.preset-delete-btn {
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--muted);
+	font-size: 0.95rem;
+	transition: color 0.15s;
+	padding: 0.1rem;
+	display: grid;
+	place-items: center;
+}
+
+.preset-delete-btn:hover {
+	color: var(--red);
+}
+
+.preset-items-list {
+	font-size: 0.72rem;
+	color: var(--muted-lt);
+	line-height: 1.4;
+	margin-bottom: var(--gap-md);
+	flex: 1;
+}
+
+.preset-apply-btn {
+	width: 100%;
+	padding: 0.45rem;
+	font-size: 0.72rem;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	border-radius: var(--r-sm);
+	background: var(--white-dim);
+	border: 1px solid var(--border-lt);
+	color: var(--text);
+	cursor: pointer;
+	transition: all 0.2s var(--ease);
+	text-align: center;
+}
+
+.preset-apply-btn:hover {
+	background: var(--white);
+	color: var(--ink);
+	border-color: var(--white);
+}
+
+.presets-empty {
+	grid-column: 1 / -1;
+	text-align: center;
+	padding: var(--gap-md);
+	color: var(--muted-lt);
+	font-size: 0.8rem;
+}
+
+
 /* ── 26. PRINT ─────────────────────────────────────────────────────── */
 @media print {
 	body * { visibility: hidden !important; }

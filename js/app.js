@@ -317,6 +317,7 @@ class AppController {
       this.loading.show('Step 3 / 3 — Starting POS…');
       this._wireEvents();
       this._setHeaderMeta();
+      this._renderPresets();
       this.loading.hide();
 
       console.log('[App] ✓ Bahr Coffee Store POS ready.');
@@ -376,6 +377,19 @@ class AppController {
         this.toast.show('Downloading 3 CSV files…');
       })
     );
+
+    document.getElementById('btnSavePreset')?.addEventListener('click', () => this._savePreset());
+    document.getElementById('presetsGrid')?.addEventListener('click', e => {
+      const applyBtn = e.target.closest('.preset-apply-btn');
+      const deleteBtn = e.target.closest('.preset-delete-btn');
+      if (applyBtn) {
+        const name = applyBtn.dataset.name;
+        this.applyPreset(name);
+      } else if (deleteBtn) {
+        const name = deleteBtn.dataset.name;
+        this.deletePreset(name);
+      }
+    });
   }
 
   // ── Navigation ─────────────────────────────────────────────────
@@ -662,6 +676,123 @@ class AppController {
   _setText(id, value) {
     const el = document.getElementById(id);
     if (el) el.textContent = value;
+  }
+
+  // ── Presets Feature ──────────────────────────────────────────────
+
+  _renderPresets() {
+    let presets = [];
+    try {
+      presets = JSON.parse(localStorage.getItem('bahr_presets') || '[]');
+    } catch (e) {
+      presets = [];
+    }
+
+    const grid = document.getElementById('presetsGrid');
+    if (!grid) return;
+
+    if (!presets.length) {
+      grid.innerHTML = `<p class="presets-empty">No presets saved yet. Add items to the cart and save them above.</p>`;
+      return;
+    }
+
+    grid.innerHTML = presets.map(preset => {
+      const itemsDesc = preset.items.map(item => {
+        const qty = item.unit === 'kg' ? item.qty.toFixed(3) : item.qty;
+        return `${item.name_en} (${qty} ${item.unit})`;
+      }).join(' • ');
+
+      return `
+        <div class="preset-card">
+          <div class="preset-card-header">
+            <span class="preset-name">${ReceiptModal.escapeHtml(preset.name)}</span>
+            <button class="preset-delete-btn" data-name="${ReceiptModal.escapeHtml(preset.name)}" aria-label="Delete preset">✕</button>
+          </div>
+          <div class="preset-items-list">${ReceiptModal.escapeHtml(itemsDesc)}</div>
+          <button class="preset-apply-btn" data-name="${ReceiptModal.escapeHtml(preset.name)}">Apply Preset</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  _savePreset() {
+    const nameEl = document.getElementById('presetName');
+    const name = nameEl?.value.trim();
+    if (!name) {
+      this.toast.show('Enter preset name', 'error');
+      nameEl?.focus();
+      return;
+    }
+
+    const lines = Catalog.getCartItems();
+    if (!lines.length) {
+      this.toast.show('Select items / ingredients first', 'error');
+      return;
+    }
+
+    const items = lines.map(line => ({
+      id: line.catalog_id,
+      name_ar: line.nameAr,
+      name_en: line.nameEn,
+      qty: line.quantity,
+      unit: line.unit
+    }));
+
+    let presets = [];
+    try {
+      presets = JSON.parse(localStorage.getItem('bahr_presets') || '[]');
+    } catch (e) {
+      presets = [];
+    }
+
+    const existingIdx = presets.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
+    if (existingIdx !== -1) {
+      if (!confirm(`Overwrite existing preset "${name}"?`)) return;
+      presets[existingIdx] = { name, items };
+    } else {
+      presets.push({ name, items });
+    }
+
+    localStorage.setItem('bahr_presets', JSON.stringify(presets));
+    if (nameEl) nameEl.value = '';
+
+    this._renderPresets();
+    this.toast.show(`✓ Preset "${name}" saved`);
+  }
+
+  applyPreset(name) {
+    let presets = [];
+    try {
+      presets = JSON.parse(localStorage.getItem('bahr_presets') || '[]');
+    } catch (e) {
+      return;
+    }
+
+    const preset = presets.find(p => p.name === name);
+    if (!preset) return;
+
+    Catalog.clearCart();
+    for (const item of preset.items) {
+      Catalog.adjustQuantity(item.id, item.qty);
+    }
+    this.toast.show(`✓ Applied "${name}"`);
+  }
+
+  deletePreset(name) {
+    if (!confirm(`Delete preset "${name}"?`)) return;
+
+    let presets = [];
+    try {
+      presets = JSON.parse(localStorage.getItem('bahr_presets') || '[]');
+    } catch (e) {
+      return;
+    }
+
+    presets = presets.filter(p => p.name !== name);
+    localStorage.setItem('bahr_presets', JSON.stringify(presets));
+
+    this._renderPresets();
+    this.toast.show(`✓ Preset "${name}" deleted`);
   }
 }
 
