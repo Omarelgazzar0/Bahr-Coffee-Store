@@ -344,6 +344,40 @@ class SheetsAPI {
     this._invalidate(this.SH.CATALOG);
   }
 
+  // ── ORDER DELETION ─────────────────────────────────────────────
+
+  /**
+   * Delete an order and all its line items.
+   * Row numbers are looked up fresh (raw sheet order, not the
+   * reversed display order) and deleted highest-row-first so
+   * earlier deletions don't shift the indices of later ones.
+   */
+  async deleteOrder(orderId) {
+    const id = parseInt(orderId);
+
+    // Raw rows as stored in the sheet (row 1 = header, row 2 = first data row)
+    const orderRows = this._rowsToObjects(await this.client.readRange(this.SH.ORDERS), this.SH.ORDERS);
+    const orderIdx  = orderRows.findIndex(o => parseInt(o.id) === id);
+    if (orderIdx === -1) throw new Error('Order not found');
+
+    const itemRows = this._rowsToObjects(await this.client.readRange(this.SH.ORDER_ITEMS), this.SH.ORDER_ITEMS);
+    const itemRowNums = itemRows
+      .map((item, i) => ({ item, rowNum: i + 2 }))
+      .filter(x => parseInt(x.item.order_id) === id)
+      .map(x => x.rowNum)
+      .sort((a, b) => b - a); // delete bottom-up so row numbers stay valid
+
+    for (const rowNum of itemRowNums) {
+      await this.client.deleteRow(this.SH.ORDER_ITEMS, rowNum);
+    }
+
+    await this.client.deleteRow(this.SH.ORDERS, orderIdx + 2);
+
+    this._invalidate(this.SH.ORDERS);
+    this._invalidate(this.SH.ORDER_ITEMS);
+    this._invalidate(this.SH.CUSTOMERS); // total_spent aggregates change too
+  }
+
   // ── ORDERS ─────────────────────────────────────────────────────
 
   async saveOrder({ customer, cart, payment, notes, taxRate }) {
