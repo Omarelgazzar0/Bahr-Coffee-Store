@@ -357,7 +357,14 @@ class AppController {
       })
     );
 
-    document.getElementById('taxRate')?.addEventListener('input', () => this._renderCart());
+    document.getElementById('taxRate')?.addEventListener('input', () => {
+      this._syncTaxEGP();
+      this._renderCart();
+    });
+    document.getElementById('taxRateEGP')?.addEventListener('input', () => {
+      this._syncTaxRate();
+      this._renderCart();
+    });
     document.getElementById('btnSaveOrder')?.addEventListener('click', () => this._saveOrder());
     document.getElementById('btnClearOrder')?.addEventListener('click', () => this._clearOrder(true));
     document.getElementById('btnAddItem')?.addEventListener('click', () => this._addCatalogItem());
@@ -380,6 +387,24 @@ class AppController {
     if (page === 'catalog')   Catalog.buildCatalogTable();
   }
 
+  // ── Tax field sync ─────────────────────────────────────────────
+
+  /** % changed → recompute EGP from current subtotal. */
+  _syncTaxEGP() {
+    const rate     = parseFloat(document.getElementById('taxRate')?.value) || 0;
+    const subtotal = Catalog.getCartTotals(0).subtotal;
+    const egpEl    = document.getElementById('taxRateEGP');
+    if (egpEl) egpEl.value = subtotal > 0 ? (subtotal * rate / 100).toFixed(2) : '';
+  }
+
+  /** EGP changed → back-calculate % from current subtotal. */
+  _syncTaxRate() {
+    const egp      = parseFloat(document.getElementById('taxRateEGP')?.value) || 0;
+    const subtotal = Catalog.getCartTotals(0).subtotal;
+    const rateEl   = document.getElementById('taxRate');
+    if (rateEl && subtotal > 0) rateEl.value = (egp / subtotal * 100).toFixed(4);
+  }
+
   // ── Cart panel ─────────────────────────────────────────────────
 
   /** Called by CatalogManager whenever the cart contents change. */
@@ -391,6 +416,12 @@ class AppController {
     const taxRate = parseFloat(document.getElementById('taxRate')?.value) || 20;
     const lines   = Catalog.getCartItems();
     const totals  = Catalog.getCartTotals(taxRate);
+
+    // Keep EGP field synced unless the user is actively typing in it
+    const egpEl = document.getElementById('taxRateEGP');
+    if (egpEl && document.activeElement !== egpEl) {
+      egpEl.value = totals.subtotal > 0 ? totals.taxAmount.toFixed(2) : '';
+    }
 
     const itemsEl  = document.getElementById('cartItems');
     const totalsEl = document.getElementById('cartTotals');
