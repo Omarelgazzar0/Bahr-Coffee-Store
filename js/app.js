@@ -19,7 +19,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════
-   CLASS: Toast
+   Class: Toast
    Simple bottom-corner notification. One instance, reused for every
    message — calling show() again replaces the current toast.
 ═══════════════════════════════════════════════════════════════════ */
