@@ -394,7 +394,7 @@ select option { background: var(--deep); }
 }
 
 .qty-input {
-	width: 3.8rem; 
+	width: 5rem; 
 	padding: 0.35rem 0.5rem;
 	background: var(--deep); 
 	border: 1px solid var(--border);

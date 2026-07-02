@@ -76,7 +76,7 @@ class Cart {
   }
 
   /** Compute subtotal, tax, grand total, and total weight (kg only). */
-  totals(catalogItems, taxRate = 14) {
+  totals(catalogItems, taxRate = 20) {
     const lines     = this.toLines(catalogItems);
     const subtotal  = lines.reduce((sum, l) => sum + l.lineTotal, 0);
     const taxAmount = subtotal * (taxRate / 100);
