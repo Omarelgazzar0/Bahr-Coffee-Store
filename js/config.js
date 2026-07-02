@@ -3,7 +3,7 @@
 
 const CONFIG = {
 
-  // ── Google Sheets Spreadsheet ID ────────────────────────────────
+  // ── GOOGLE Sheets Spreadsheet ID ────────────────────────────────
   SPREADSHEET_ID: '1WpzhVCLM3RIOaOIUt07ttbOtEJHE7lO8NJg6LYpFiAQ',
 
   // ── Service Account credentials ──────────────────────────────────
