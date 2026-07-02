@@ -608,7 +608,7 @@ class AppController {
       const fmt = ReceiptModal.formatDate;
 
       document.getElementById('orderTableBody').innerHTML = !orders.length
-        ? `<tr><td colspan="7" class="table-empty">No orders yet</td></tr>`
+        ? `<tr><td colspan="8" class="table-empty">No orders yet</td></tr>`
         : orders.map(o => `
             <tr>
               <td><span class="badge badge-amber">${o.invoice}</span></td>
@@ -618,6 +618,7 @@ class AppController {
               <td class="mono" style="color:var(--white)">EGP ${Number(o.total).toFixed(2)}</td>
               <td><span class="badge badge-teal">${o.payment}</span></td>
               <td><button class="btn btn-teal btn-sm" onclick="App.viewOrderReceipt(${o.id})">Receipt</button></td>
+              <td><button class="btn btn-danger btn-sm" onclick="App.deleteOrder(${o.id})">Delete</button></td>
             </tr>`).join('');
 
     } catch (e) {
@@ -641,6 +642,18 @@ class AppController {
       });
     } catch (e) {
       this.toast.show('Receipt error: ' + e.message, 'error');
+    }
+  }
+
+  /** Delete an order permanently (asks for confirmation first). */
+  async deleteOrder(orderId) {
+    if (!confirm('Delete this order permanently? This cannot be undone.')) return;
+    try {
+      await Sheets.deleteOrder(orderId);
+      this.toast.show('✓ Order deleted');
+      await this._renderOrdersPage();
+    } catch (e) {
+      this.toast.show('Delete failed: ' + e.message, 'error');
     }
   }
 
