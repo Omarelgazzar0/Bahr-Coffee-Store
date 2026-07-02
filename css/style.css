@@ -680,7 +680,7 @@ tbody tr:last-child td { border-bottom: none; }
 .rp-summary-row.final { border-top: 1px solid var(--border-lt); margin-top: 0.4rem; padding-top: 0.6rem; }
 .rp-summary-row .sk { font-size: 0.72rem; color: var(--muted-lt); }
 .rp-summary-row .sv { font-size: 0.85rem; color: var(--text); }
-.rp-summary-row.final .sk { font-weight: 700; font-size: 0.8rem; color: var(--white); }
+.rp-summary-row.final .sk { font-weight: 600; font-size: 0.8rem; color: var(--coral); }
 .rp-summary-row.final .sv { font-size: 1.1rem; color: var(--white); }
 
 .rp-footer { text-align: center; margin-top: var(--gap-lg); font-size: 0.7rem; color: var(--muted); line-height: 1.7; }
