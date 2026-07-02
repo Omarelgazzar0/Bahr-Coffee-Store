@@ -46,6 +46,7 @@ sbj4IVSWCZKFoG1GepHp9Gc=
     CUSTOMERS:   'Customers',
     ORDER_ITEMS: 'Order_Items',
     CATALOG:     'Catalog',
+    PRESETS:     'Presets',
   },
 
   // ── Default catalog seeded on first run ──────────────────────────

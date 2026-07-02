@@ -226,13 +226,14 @@ class SheetsAPI {
       [this.SH.CATALOG]:     ['id', 'name_ar', 'name_en', 'type', 'price', 'unit', 'active'],
       [this.SH.CUSTOMERS]:   ['id', 'name', 'mobile', 'address', 'created_at'],
       [this.SH.ORDERS]:      ['id', 'customer_id', 'invoice', 'date', 'payment', 'notes',
-                              'subtotal', 'tax_rate', 'tax_amount', 'total', 'created_at'],
+                              'subtotal', 'tax_rate', 'tax_amount', 'total', 'created_at', 'preset_name'],
       [this.SH.ORDER_ITEMS]: ['id', 'order_id', 'catalog_id', 'name_ar', 'name_en',
                               'price', 'quantity', 'unit', 'line_total'],
+      [this.SH.PRESETS]:     ['id', 'name', 'items_json', 'created_at'],
     };
 
     // In-memory cache — cleared per-sheet after any write
-    this._cache = { catalog: null, customers: null, orders: null, items: null };
+    this._cache = { catalog: null, customers: null, orders: null, items: null, presets: null };
   }
 
   // ── Bootstrapping ────────────────────────────────────────────────
@@ -303,6 +304,7 @@ class SheetsAPI {
     if (sheetName === this.SH.CUSTOMERS)   this._cache.customers = null;
     if (sheetName === this.SH.ORDERS)      this._cache.orders    = null;
     if (sheetName === this.SH.ORDER_ITEMS) this._cache.items     = null;
+    if (sheetName === this.SH.PRESETS)     this._cache.presets   = null;
   }
 
   // ── CATALOG ────────────────────────────────────────────────────
@@ -378,9 +380,51 @@ class SheetsAPI {
     this._invalidate(this.SH.CUSTOMERS); // total_spent aggregates change too
   }
 
+  // ── PRESETS ──────────────────────────────────────────────────────
+
+  async getAllPresets() {
+    if (!this._cache.presets) {
+      const rows = await this.client.readRange(this.SH.PRESETS);
+      this._cache.presets = this._rowsToObjects(rows, this.SH.PRESETS).map(p => ({
+        ...p,
+        id:    parseInt(p.id),
+        items: JSON.parse(p.items_json || '[]'),
+      }));
+    }
+    return [...this._cache.presets].reverse();
+  }
+
+  /** Save (or overwrite, matched by name) a preset — name + list of {id,name_ar,name_en,qty,unit}. */
+  async savePreset(name, items) {
+    const all      = await this.getAllPresets();
+    const existing = all.find(p => p.name.toLowerCase() === name.toLowerCase());
+    const itemsJson = JSON.stringify(items);
+
+    if (existing) {
+      const rawRows = this._rowsToObjects(await this.client.readRange(this.SH.PRESETS), this.SH.PRESETS);
+      const rowIdx  = rawRows.findIndex(p => parseInt(p.id) === existing.id);
+      await this.client.updateCell(this.SH.PRESETS, `C${rowIdx + 2}`, itemsJson);
+      this._invalidate(this.SH.PRESETS);
+      return existing.id;
+    }
+
+    const id = this._nextId(all);
+    await this.client.appendRows(this.SH.PRESETS, [[id, name, itemsJson, this._timestamp()]]);
+    this._invalidate(this.SH.PRESETS);
+    return id;
+  }
+
+  async deletePreset(name) {
+    const rawRows = this._rowsToObjects(await this.client.readRange(this.SH.PRESETS), this.SH.PRESETS);
+    const rowIdx  = rawRows.findIndex(p => p.name === name);
+    if (rowIdx === -1) throw new Error('Preset not found');
+    await this.client.deleteRow(this.SH.PRESETS, rowIdx + 2);
+    this._invalidate(this.SH.PRESETS);
+  }
+
   // ── ORDERS ─────────────────────────────────────────────────────
 
-  async saveOrder({ customer, cart, payment, notes, taxRate }) {
+  async saveOrder({ customer, cart, payment, notes, taxRate, presetName }) {
     const customerId = await this._upsertCustomer(customer);
 
     const subtotal  = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -395,6 +439,7 @@ class SheetsAPI {
     await this.client.appendRows(this.SH.ORDERS, [[
       orderId, customerId, invoice, date, payment || 'Cash', notes || '',
       +subtotal.toFixed(2), taxRate, +taxAmount.toFixed(2), +total.toFixed(2), this._timestamp(),
+      presetName || '',
     ]]);
 
     const items   = await this._getAllItems();
@@ -414,6 +459,7 @@ class SheetsAPI {
       subtotal:   +subtotal.toFixed(2),
       tax_amount: +taxAmount.toFixed(2),
       total:      +total.toFixed(2),
+      preset_name: presetName || '',
     };
   }
 

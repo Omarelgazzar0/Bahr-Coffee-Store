@@ -153,7 +153,7 @@ class ReceiptModal {
     return isNaN(d) ? iso : d.toLocaleDateString('en-EG', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
-  show({ invoice, date, custName, mobile, address, taxRate, subtotal, taxAmount, grandTotal, totalKg, payment }) {
+  show({ invoice, date, custName, mobile, address, taxRate, subtotal, taxAmount, grandTotal, totalKg, payment, presetName }) {
     const esc = ReceiptModal.escapeHtml;
     const fmt = ReceiptModal.formatDate;
 
@@ -167,6 +167,7 @@ class ReceiptModal {
         <span class="rk">Invoice</span>  <span class="rv mono">${invoice}</span>
         <span class="rk">Date</span>     <span class="rv">${fmt(date)}</span>
         <span class="rk">Payment</span>  <span class="rv">${payment}</span>
+        ${presetName ? `<span class="rk">Preset</span><span class="rv">${esc(presetName)}</span>` : ''}
       </div>
       <hr class="rp-divider"/>
       <div class="rp-info">
@@ -300,6 +301,7 @@ class AppController {
     this.drawer   = new CartDrawer();
     this.receipt  = new ReceiptModal();
     this.loading  = new LoadingScreen();
+    this._activePresetName = null; // set when a preset is applied, cleared on manual edit / clear / save
   }
 
   // ── Boot sequence ──────────────────────────────────────────────
@@ -317,7 +319,7 @@ class AppController {
       this.loading.show('Step 3 / 3 — Starting POS…');
       this._wireEvents();
       this._setHeaderMeta();
-      this._renderPresets();
+      await this._renderPresets();
       this.loading.hide();
 
       console.log('[App] ✓ Bahr Coffee Store POS ready.');
@@ -383,11 +385,9 @@ class AppController {
       const applyBtn = e.target.closest('.preset-apply-btn');
       const deleteBtn = e.target.closest('.preset-delete-btn');
       if (applyBtn) {
-        const name = applyBtn.dataset.name;
-        this.applyPreset(name);
+        this.applyPreset(applyBtn.dataset.name);
       } else if (deleteBtn) {
-        const name = deleteBtn.dataset.name;
-        this.deletePreset(name);
+        this.deletePreset(deleteBtn.dataset.name);
       }
     });
   }
@@ -514,6 +514,7 @@ class AppController {
     try {
       const result = await Sheets.saveOrder({
         customer: { name, mobile, address }, cart: lines, payment, notes, taxRate,
+        presetName: this._activePresetName,
       });
 
       this.toast.show('✓ Saved — ' + result.invoice);
@@ -523,10 +524,12 @@ class AppController {
         custName: name, mobile, address, taxRate,
         subtotal: result.subtotal, taxAmount: result.tax_amount, grandTotal: result.total,
         totalKg: Catalog.getCartTotals(taxRate).totalKg, payment,
+        presetName: this._activePresetName,
       });
 
       this.drawer.close();
       this._clearOrder(false);
+      this._activePresetName = null;
 
     } catch (e) {
       this.toast.show('Save failed: ' + e.message, 'error');
@@ -537,6 +540,7 @@ class AppController {
 
   _clearOrder(notify = true) {
     Catalog.clearCart();
+    this._activePresetName = null;
     ['custName', 'custMobile', 'custAddr', 'orderNotes'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
@@ -653,6 +657,7 @@ class AppController {
         custName: order.customer_name, mobile: order.mobile, address: order.address,
         taxRate: order.tax_rate, subtotal: order.subtotal, taxAmount: order.tax_amount,
         grandTotal: order.total, totalKg: weight, payment: order.payment,
+        presetName: order.preset_name,
       });
     } catch (e) {
       this.toast.show('Receipt error: ' + e.message, 'error');
@@ -680,16 +685,17 @@ class AppController {
 
   // ── Presets Feature ──────────────────────────────────────────────
 
-  _renderPresets() {
-    let presets = [];
-    try {
-      presets = JSON.parse(localStorage.getItem('bahr_presets') || '[]');
-    } catch (e) {
-      presets = [];
-    }
-
+  async _renderPresets() {
     const grid = document.getElementById('presetsGrid');
     if (!grid) return;
+
+    let presets = [];
+    try {
+      presets = await Sheets.getAllPresets();
+    } catch (e) {
+      grid.innerHTML = `<p class="presets-empty">Could not load presets: ${ReceiptModal.escapeHtml(e.message)}</p>`;
+      return;
+    }
 
     if (!presets.length) {
       grid.innerHTML = `<p class="presets-empty">No presets saved yet. Add items to the cart and save them above.</p>`;
@@ -698,7 +704,7 @@ class AppController {
 
     grid.innerHTML = presets.map(preset => {
       const itemsDesc = preset.items.map(item => {
-        const qty = item.unit === 'kg' ? item.qty.toFixed(3) : item.qty;
+        const qty = item.unit === 'kg' ? Number(item.qty).toFixed(3) : item.qty;
         return `${item.name_en} (${qty} ${item.unit})`;
       }).join(' • ');
 
@@ -715,7 +721,7 @@ class AppController {
     }).join('');
   }
 
-  _savePreset() {
+  async _savePreset() {
     const nameEl = document.getElementById('presetName');
     const name = nameEl?.value.trim();
     if (!name) {
@@ -735,64 +741,51 @@ class AppController {
       name_ar: line.nameAr,
       name_en: line.nameEn,
       qty: line.quantity,
-      unit: line.unit
+      unit: line.unit,
     }));
 
-    let presets = [];
     try {
-      presets = JSON.parse(localStorage.getItem('bahr_presets') || '[]');
+      const existing = (await Sheets.getAllPresets()).find(p => p.name.toLowerCase() === name.toLowerCase());
+      if (existing && !confirm(`Overwrite existing preset "${name}"?`)) return;
+
+      await Sheets.savePreset(name, items);
+      if (nameEl) nameEl.value = '';
+
+      this._activePresetName = name;
+      await this._renderPresets();
+      this.toast.show(`✓ Preset "${name}" saved`);
     } catch (e) {
-      presets = [];
+      this.toast.show('Save failed: ' + e.message, 'error');
     }
-
-    const existingIdx = presets.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
-    if (existingIdx !== -1) {
-      if (!confirm(`Overwrite existing preset "${name}"?`)) return;
-      presets[existingIdx] = { name, items };
-    } else {
-      presets.push({ name, items });
-    }
-
-    localStorage.setItem('bahr_presets', JSON.stringify(presets));
-    if (nameEl) nameEl.value = '';
-
-    this._renderPresets();
-    this.toast.show(`✓ Preset "${name}" saved`);
   }
 
-  applyPreset(name) {
-    let presets = [];
+  async applyPreset(name) {
     try {
-      presets = JSON.parse(localStorage.getItem('bahr_presets') || '[]');
+      const presets = await Sheets.getAllPresets();
+      const preset  = presets.find(p => p.name === name);
+      if (!preset) return;
+
+      Catalog.clearCart();
+      for (const item of preset.items) {
+        Catalog.adjustQuantity(item.id, item.qty);
+      }
+      this._activePresetName = name;
+      this.toast.show(`✓ Applied "${name}"`);
     } catch (e) {
-      return;
+      this.toast.show('Apply failed: ' + e.message, 'error');
     }
-
-    const preset = presets.find(p => p.name === name);
-    if (!preset) return;
-
-    Catalog.clearCart();
-    for (const item of preset.items) {
-      Catalog.adjustQuantity(item.id, item.qty);
-    }
-    this.toast.show(`✓ Applied "${name}"`);
   }
 
-  deletePreset(name) {
+  async deletePreset(name) {
     if (!confirm(`Delete preset "${name}"?`)) return;
-
-    let presets = [];
     try {
-      presets = JSON.parse(localStorage.getItem('bahr_presets') || '[]');
+      await Sheets.deletePreset(name);
+      if (this._activePresetName === name) this._activePresetName = null;
+      await this._renderPresets();
+      this.toast.show(`✓ Preset "${name}" deleted`);
     } catch (e) {
-      return;
+      this.toast.show('Delete failed: ' + e.message, 'error');
     }
-
-    presets = presets.filter(p => p.name !== name);
-    localStorage.setItem('bahr_presets', JSON.stringify(presets));
-
-    this._renderPresets();
-    this.toast.show(`✓ Preset "${name}" deleted`);
   }
 }
 
