@@ -176,7 +176,7 @@ body {
 }
 
 
-/* ── 5. PAGE ROUTING ───────────────────────────────────────────────── */
+/* ── 5. Page ROUTING ───────────────────────────────────────────────── */
 .page { display: none; }
 .page.active { display: block; }
 
