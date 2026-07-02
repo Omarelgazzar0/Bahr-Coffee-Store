@@ -10,7 +10,7 @@
 //   SheetsClient → low-level read/write helpers (get/append/put/delete)
 //   SheetsAPI    → high-level domain methods (catalog/orders/customers)
 //
-// Usage:
+// USAGE:
 //   await Sheets.init()
 //   await Sheets.getCatalog(true)
 //   await Sheets.saveOrder({ customer, cart, payment, notes, taxRate })
