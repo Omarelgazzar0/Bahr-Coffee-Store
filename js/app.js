@@ -167,7 +167,7 @@ class ReceiptModal {
         <span class="rk">Invoice</span>  <span class="rv mono">${invoice}</span>
         <span class="rk">Date</span>     <span class="rv">${fmt(date)}</span>
         <span class="rk">Payment</span>  <span class="rv">${payment}</span>
-        ${presetName ? `<span class="rk">Preset</span><span class="rv">${esc(presetName)}</span>` : ''}
+        ${presetName ? `<span class="rv-mono">${esc(presetName)}</span>` : ''}
       </div>
       <hr class="rp-divider"/>
       <div class="rp-info">
