@@ -592,7 +592,7 @@ class AppController {
       const fmt = ReceiptModal.formatDate;
 
       document.getElementById('customerTableBody').innerHTML = !customers.length
-        ? `<tr><td colspan="7" class="table-empty">No customers yet</td></tr>`
+        ? `<tr><td colspan="8" class="table-empty">No customers yet</td></tr>`
         : customers.map(c => `
             <tr>
               <td><span class="badge badge-amber">${c.id}</span></td>
@@ -602,6 +602,7 @@ class AppController {
               <td><span class="badge badge-teal">${c.order_count}</span></td>
               <td class="mono" style="color:var(--white)">EGP ${Number(c.total_spent).toFixed(2)}</td>
               <td class="mono muted" style="font-size:.75rem">${fmt(c.created_at?.split(' ')[0])}</td>
+              <td><button class="btn btn-danger btn-sm" onclick="App.deleteCustomer(${c.id})">Delete</button></td>
             </tr>`).join('');
 
     } catch (e) {
@@ -671,6 +672,18 @@ class AppController {
       await Sheets.deleteOrder(orderId);
       this.toast.show('✓ Order deleted');
       await this._renderOrdersPage();
+    } catch (e) {
+      this.toast.show('Delete failed: ' + e.message, 'error');
+    }
+  }
+
+  /** Delete a customer permanently (their past orders remain as history). */
+  async deleteCustomer(customerId) {
+    if (!confirm('Delete this customer permanently? Their past orders will remain in history.')) return;
+    try {
+      await Sheets.deleteCustomer(customerId);
+      this.toast.show('✓ Customer deleted');
+      await this._renderCustomersPage();
     } catch (e) {
       this.toast.show('Delete failed: ' + e.message, 'error');
     }

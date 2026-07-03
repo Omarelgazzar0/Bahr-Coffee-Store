@@ -380,6 +380,17 @@ class SheetsAPI {
     this._invalidate(this.SH.CUSTOMERS); // total_spent aggregates change too
   }
 
+  /** Delete a customer row. Their past orders remain in the sheet as history. */
+  async deleteCustomer(customerId) {
+    const id   = parseInt(customerId);
+    const rows = this._rowsToObjects(await this.client.readRange(this.SH.CUSTOMERS), this.SH.CUSTOMERS);
+    const idx  = rows.findIndex(c => parseInt(c.id) === id);
+    if (idx === -1) throw new Error('Customer not found');
+
+    await this.client.deleteRow(this.SH.CUSTOMERS, idx + 2);
+    this._invalidate(this.SH.CUSTOMERS);
+  }
+
   // ── PRESETS ──────────────────────────────────────────────────────
 
   async getAllPresets() {
