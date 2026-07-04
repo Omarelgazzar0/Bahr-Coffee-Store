@@ -90,6 +90,65 @@
 }
 
 
+/* ── 1b. LIGHT THEME OVERRIDES ─────────────────────────────────────
+   Activated via [data-theme="light"] on <html>. Because every rule
+   in this file reads colours through variables, overriding just
+   these tokens re-themes the entire app with no other CSS changes. */
+[data-theme="light"] {
+	--ink:        #FAFAFA;
+	--deep:       #FFFFFF;
+	--surface:    #FFFFFF;
+	--border:     #E4E4E4;
+	--border-lt:  #D0D0D0;
+
+	--white:      #000000;
+	--white-dim:  rgba(0, 0, 0, 0.05);
+	--white-glow: rgba(0, 0, 0, 0.10);
+	--white-hi:   rgba(0, 0, 0, 0.85);
+
+	--text:       #1A1A1A;
+	--text-dim:   rgba(26, 26, 26, 0.65);
+	--muted:      #9A9A9A;
+	--muted-lt:   #6B6B6B;
+
+	--red:        #E0201F;
+	--red-dim:    rgba(224, 32, 31, 0.10);
+
+	--accent:     #000000;
+	--accent-dim: rgba(0, 0, 0, 0.06);
+	--accent-glow:rgba(0, 0, 0, 0.14);
+
+	--amber:      #000000;
+	--amber-lt:   #000000;
+	--amber-dim:  rgba(0,0,0,0.06);
+	--amber-glow: rgba(0,0,0,0.12);
+	--coral:      #E0201F;
+	--coral-dim:  rgba(224,32,31,0.10);
+	--teal:       #444444;
+	--teal-dim:   rgba(68,68,68,0.08);
+	--teal-glow:  rgba(68,68,68,0.14);
+	--sky:        #555555;
+	--sky-dim:    rgba(85,85,85,0.08);
+	--violet:     #4A4A4A;
+	--violet-dim: rgba(74,74,74,0.08);
+	--cream:      #1A1A1A;
+	--cream-dim:  rgba(26,26,26,0.55);
+}
+
+/* Card shadows read better as soft grey on a white surface than
+   pure black — nudge them slightly for the light theme only. */
+[data-theme="light"] .stat-card::after { background: #000; opacity: 0.03; }
+[data-theme="light"] .modal { box-shadow: 0 -2px 0 var(--white) inset, 0 24px 64px rgba(0,0,0,0.15); }
+[data-theme="light"] .cart-fab,
+[data-theme="light"] #toastEl { box-shadow: 0 4px 20px rgba(0,0,0,0.18); }
+
+/* Smooth colour transition when switching themes */
+body, .card, .catalog-card, .modal, input, select, textarea, button {
+	transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+
+
 /* ── 2. RESET & BASE ───────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -156,6 +215,36 @@ body {
 }
 
 #mainNav { display: flex; gap: 0.2rem; }
+
+/* ── Theme toggle button ────────────────────────────────────────── */
+.theme-toggle {
+	background: var(--surface);
+	border: 1px solid var(--border-lt);
+	border-radius: 999px;
+	width: 38px;
+	height: 38px;
+	display: grid;
+	place-items: center;
+	cursor: pointer;
+	font-size: 1rem;
+	margin-left: 0.75rem;
+	position: relative;
+	flex-shrink: 0;
+}
+.theme-toggle:hover { border-color: var(--white); }
+.theme-toggle .theme-icon-dark,
+.theme-toggle .theme-icon-light {
+	position: absolute;
+	transition: opacity 0.2s, transform 0.2s;
+}
+/* Dark theme active → show moon, hide sun */
+:root .theme-toggle .theme-icon-light,
+[data-theme="dark"] .theme-toggle .theme-icon-light { opacity: 0; transform: scale(0.5) rotate(-90deg); }
+[data-theme="dark"] .theme-toggle .theme-icon-dark  { opacity: 1; transform: scale(1) rotate(0deg); }
+/* Light theme active → show sun, hide moon */
+[data-theme="light"] .theme-toggle .theme-icon-dark  { opacity: 0; transform: scale(0.5) rotate(90deg); }
+[data-theme="light"] .theme-toggle .theme-icon-light { opacity: 1; transform: scale(1) rotate(0deg); }
+
 
 .nav-btn {
 	background: none; border: none; cursor: pointer;

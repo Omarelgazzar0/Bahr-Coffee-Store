@@ -2,6 +2,7 @@
 // js/app.js — Main Application Controller
 //
 // Classes:
+//   ThemeManager   → dark/light theme toggle, persisted in localStorage
 //   Toast          → bottom notification messages
 //   Router         → page switching (POS / Catalog / Customers / Orders)
 //   CartDrawer     → mobile slide-up cart panel + swipe-to-close
@@ -16,6 +17,43 @@
 //     3. wire all events, render initial UI state
 // ═══════════════════════════════════════════════════════════════════
 'use strict';
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   CLASS: ThemeManager
+   Toggles [data-theme] on <html> between 'dark' and 'light' and
+   remembers the choice in localStorage. The actual initial theme is
+   already applied by a tiny inline script in <head> (before first
+   paint) — this class just handles the button + persists changes.
+═══════════════════════════════════════════════════════════════════ */
+class ThemeManager {
+  constructor(storageKey = 'bahr_theme') {
+    this.key = storageKey;
+    this.btn = document.getElementById('themeToggle');
+  }
+
+  current() {
+    return document.documentElement.getAttribute('data-theme') || 'dark';
+  }
+
+  set(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem(this.key, theme);
+  }
+
+  toggle() {
+    this.set(this.current() === 'dark' ? 'light' : 'dark');
+  }
+
+  wire() {
+    this.btn?.addEventListener('click', () => {
+      this.toggle();
+      if (document.getElementById('page-dashboard')?.classList.contains('active')) {
+        App?._renderDashboardPage();
+      }
+    });
+  }
+}
 
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -327,6 +365,7 @@ class LoadingScreen {
 ═══════════════════════════════════════════════════════════════════ */
 class AppController {
   constructor() {
+    this.theme    = new ThemeManager();
     this.toast    = new Toast();
     this.router   = new Router(page => this._onNavigate(page));
     this.drawer   = new CartDrawer();
@@ -380,6 +419,7 @@ class AppController {
   // ── Event wiring ───────────────────────────────────────────────
 
   _wireEvents() {
+    this.theme.wire();
     this.router.wireNavButtons();
     this.receipt.wireCloseButtons();
     this.drawer.wireSwipeToClose();
@@ -727,6 +767,14 @@ class AppController {
     const W = rect.width, H = rect.height;
     ctx.clearRect(0, 0, W, H);
 
+    // Read the current theme's accent colour so the chart matches
+    // dark mode (white bars) or light mode (black bars) automatically
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--white').trim() || '#ffffff';
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const dimBar   = isLight ? 'rgba(0,0,0,0.08)'  : 'rgba(255,255,255,0.08)';
+    const dimLabel = isLight ? 'rgba(0,0,0,0.55)'  : 'rgba(255,255,255,0.7)';
+    const axisLabel = isLight ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.4)';
+
     const max = Math.max(...values, 0.0001);
     const padding = { top: 20, bottom: 28, left: 8, right: 8 };
     const chartW = W - padding.left - padding.right;
@@ -739,12 +787,12 @@ class AppController {
       const x = padding.left + i * (barW + barGap);
       const y = padding.top + (chartH - barH);
 
-      ctx.fillStyle = val > 0 ? '#ffffff' : 'rgba(255,255,255,0.08)';
+      ctx.fillStyle = val > 0 ? accent : dimBar;
       ctx.fillRect(x, y, barW, barH);
 
       // Value label above the bar (only if it fits and is non-zero)
       if (val > 0 && barW > 14) {
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.fillStyle = dimLabel;
         ctx.font = '9px monospace';
         ctx.textAlign = 'center';
         ctx.fillText(formatValue(val), x + barW / 2, y - 4);
@@ -753,7 +801,7 @@ class AppController {
       // Day label below the axis (skip every other one on narrow screens)
       const showLabel = values.length <= 14 || i % 2 === 0;
       if (showLabel) {
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.fillStyle = axisLabel;
         ctx.font = '8px monospace';
         ctx.textAlign = 'center';
         ctx.fillText(labels[i], x + barW / 2, H - 10);

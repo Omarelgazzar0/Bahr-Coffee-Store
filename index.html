@@ -10,6 +10,15 @@
         <link rel="preconnect" href="https://fonts.googleapis.com"/>
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,700&family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 
+        <!--=============== Theme (applied before paint to avoid flash) ===============-->
+        <script>
+            (function () {
+                var saved = localStorage.getItem('bahr_theme');
+                var theme = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+                document.documentElement.setAttribute('data-theme', theme);
+            })();
+        </script>
+
         <!--=============== CSS ===============-->
         <link rel="stylesheet" href="css/style.css"/>
     </head>
@@ -30,6 +39,11 @@
                 <button class="nav-btn" data-page="customers"><span class="nav-icon">👥</span> Customers</button>
                 <button class="nav-btn" data-page="orders"><span class="nav-icon">📋</span> Orders</button>
             </nav>
+
+            <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark/light theme">
+                <span class="theme-icon-dark">🌙</span>
+                <span class="theme-icon-light">☀️</span>
+            </button>
         </header>
 
         <!--=============== PAGE: POS ===============-->
