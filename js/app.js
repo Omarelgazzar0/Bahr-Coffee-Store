@@ -307,57 +307,42 @@ class ReceiptModal {
   }
 
   /**
-   * Share the receipt as a real PDF file via the device's native share
-   * sheet (lets the person pick WhatsApp and attach the actual file).
-   * Falls back to downloading the PDF + opening a WhatsApp text message
-   * on browsers that don't support sharing files (mainly desktop).
+   * Open the customer's specific WhatsApp chat and download the receipt PDF
+   * so it's the newest file ready to attach.
+   *
+   * Note on what's technically possible: no browser can auto-attach a file
+   * into a specific WhatsApp contact's chat — both iOS and Android block
+   * that for security/privacy, and the only way around it is WhatsApp's
+   * paid Business API (a separate server-side system). This is the most
+   * reliable flow achievable from a plain website: it deep-links straight
+   * into the right chat, and the PDF is downloaded right after so it's one
+   * tap (📎 → Recent) away from being sent.
    */
-  async shareReceiptPDF() {
+  shareReceiptPDF() {
     if (!this._last) return;
     const { invoice, mobile } = this._last;
 
-    let doc;
-    try {
-      doc = this.buildPDF();
-    } catch (e) {
-      App?.toast.show('Could not build PDF: ' + e.message, 'error');
+    if (!mobile) {
+      App?.toast.show('No mobile number on file for this customer', 'error');
       return;
     }
 
-    const filename = `Receipt-${invoice}.pdf`;
-    const blob = doc.output('blob');
-    const file = new File([blob], filename, { type: 'application/pdf' });
-
-    // Preferred path: native share sheet with the real PDF attached
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({
-          files: [file],
-          title: 'Bahr Coffee Store Receipt',
-          text: `Receipt ${invoice} — Bahr Coffee Store`,
-        });
-        return;
-      } catch (err) {
-        if (err.name === 'AbortError') return; // user cancelled the share sheet
-        // fall through to the download fallback below
-      }
-    }
-
-    // Fallback (desktop / unsupported browsers): download PDF, then open
-    // WhatsApp with a text message — the person attaches the file manually.
-    doc.save(filename);
-
-    let phone = (mobile || '').replace(/[^\d]/g, '');
+    // Open the WhatsApp chat FIRST and synchronously (still inside the
+    // click handler) — waiting until after any async work risks the
+    // browser treating it as a blocked popup instead of a real click.
+    let phone = mobile.replace(/[^\d]/g, '');
     if (phone.startsWith('0')) phone = phone.slice(1);
-    if (phone && !phone.startsWith('20')) phone = '20' + phone;
+    if (!phone.startsWith('20')) phone = '20' + phone;
+    window.open(`https://wa.me/${phone}`, '_blank');
 
-    const message = `☕ *Bahr Coffee Store* — Receipt ${invoice} attached as PDF. Thank you! 🌟`;
-    const url = phone
-      ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-      : `https://wa.me/?text=${encodeURIComponent(message)}`;
-
-    App?.toast.show('PDF downloaded — attach it in the WhatsApp chat that just opened');
-    window.open(url, '_blank');
+    // Now build and download the PDF so it's ready to attach
+    try {
+      const doc = this.buildPDF();
+      doc.save(`Receipt-${invoice}.pdf`);
+      App?.toast.show('✓ Chat opened — tap 📎 and attach the PDF that just downloaded');
+    } catch (e) {
+      App?.toast.show('Could not build PDF: ' + e.message, 'error');
+    }
   }
 
   close() {
