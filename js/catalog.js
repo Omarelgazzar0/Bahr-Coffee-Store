@@ -160,6 +160,11 @@ class CatalogManager {
         const qty  = this.cart.get(item.id);
         const step = Cart.stepFor(item.unit);
         const val  = qty > 0 ? (item.unit === 'kg' ? qty.toFixed(3) : qty) : '';
+        const threshold = CONFIG.LOW_STOCK_THRESHOLD ?? 5;
+        const stockBadge = item.stock == null ? '' : `
+            <span class="stock-badge ${item.stock <= threshold ? 'stock-low' : ''}">
+                ${item.stock <= threshold ? '⚠ ' : ''}${item.stock} ${item.unit} left
+            </span>`;
 
         return `
         <div class="catalog-card ${qty > 0 ? 'selected' : ''}"
@@ -171,6 +176,7 @@ class CatalogManager {
             <span>EGP ${Number(item.price).toLocaleString('en-EG')}</span>
             <span class="price-unit">/ ${item.unit}</span>
             </div>
+            ${stockBadge}
             <div class="qty-row">
             <span class="qty-label">Qty (${item.unit})</span>
             <div class="qty-controls">
@@ -224,13 +230,18 @@ class CatalogManager {
         if (!tbody) return;
 
         tbody.innerHTML = !all.length
-        ? `<tr><td colspan="8" class="table-empty">No items yet</td></tr>`
+        ? `<tr><td colspan="9" class="table-empty">No items yet</td></tr>`
         : all.map(item => this._tableRowHTML(item)).join('');
     }
 
     _tableRowHTML(item) {
         const badge = this.TYPE_BADGE[item.type] ?? 'badge-sky';
         const label = this.TYPE_LABEL[item.type] ?? item.type;
+
+        const threshold = CONFIG.LOW_STOCK_THRESHOLD ?? 5;
+        const stockDisplay = item.stock == null
+            ? '<span class="muted">—</span>'
+            : `<span class="badge ${item.stock <= threshold ? 'badge-coral' : 'badge-teal'}">${item.stock} ${item.unit}</span>`;
 
         return `
         <tr style="${item.active ? '' : 'opacity:.45'}">
@@ -240,12 +251,28 @@ class CatalogManager {
             <td><span class="badge ${badge}">${label}</span></td>
             <td class="mono">EGP ${Number(item.price).toLocaleString('en-EG')}</td>
             <td class="mono">${item.unit}</td>
+            <td>${stockDisplay}</td>
             <td><span class="badge ${item.active ? 'badge-teal' : 'badge-coral'}">${item.active ? 'Active' : 'Archived'}</span></td>
             <td style="display:flex;gap:.35rem;flex-wrap:wrap">
+            <button class="btn btn-teal btn-sm" onclick="Catalog.promptRestock(${item.id})">Restock</button>
             <button class="btn btn-teal btn-sm" onclick="Catalog.toggleItem(${item.id})">${item.active ? 'Archive' : 'Restore'}</button>
             <button class="btn btn-danger" onclick="Catalog.deleteItem(${item.id})">Delete</button>
             </td>
         </tr>`;
+    }
+
+    /** Ask how much stock to add, then persist it. */
+    async promptRestock(id) {
+        const amount = prompt('Add how much stock? (enter a negative number to remove stock)');
+        if (amount === null || amount.trim() === '') return;
+        const parsed = parseFloat(amount);
+        if (isNaN(parsed)) { App?.toast.show('Enter a valid number', 'error'); return; }
+        try {
+            const newStock = await this.sheets.restockItem(id, parsed);
+            await this.buildCatalogTable();
+            await this.load();
+            App?.toast.show(`✓ Stock updated → ${newStock}`);
+        } catch (e) { App?.toast.show(e.message, 'error'); }
     }
 
     async toggleItem(id) {

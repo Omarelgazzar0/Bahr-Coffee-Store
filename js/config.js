@@ -50,14 +50,18 @@ sbj4IVSWCZKFoG1GepHp9Gc=
   },
 
   // ── Default catalog seeded on first run ──────────────────────────
+  // ── Low-stock warning threshold (in the item's own unit) ─────────
+  LOW_STOCK_THRESHOLD: 5,
+
   DEFAULT_CATALOG: [
-    [1, 'حبشي هرهري',     'Ethiopian Harari',   'coffee',     440, 'kg',    1],
-    [2, 'برازيلي سانتوس', 'Brazilian Santos',   'coffee',     580, 'kg',    1],
-    [3, 'إندونيسي',        'Indonesian',         'coffee',     300, 'kg',    1],
-    [4, 'هندي أرابيكا',    'Indian Arabica',     'coffee',     700, 'kg',    1],
-    [5, 'باكيت ٢٥٠ جم',    '250g Pack',          'package',     15, 'piece', 1],
-    [6, 'باكيت ٥٠٠ جم',    '500g Pack',          'package',     25, 'piece', 1],
-    [7, 'سكر',             'Sugar',              'ingredient',  30, 'kg',    1],
-    [8, 'هيل',             'Cardamom',           'ingredient', 250, 'kg',    1],
+    // id, name_ar, name_en, type, price, unit, active, stock
+    [1, 'حبشي هرهري',     'Ethiopian Harari',   'coffee',     440, 'kg',    1, 25],
+    [2, 'برازيلي سانتوس', 'Brazilian Santos',   'coffee',     580, 'kg',    1, 25],
+    [3, 'إندونيسي',        'Indonesian',         'coffee',     300, 'kg',    1, 25],
+    [4, 'هندي أرابيكا',    'Indian Arabica',     'coffee',     700, 'kg',    1, 25],
+    [5, 'باكيت ٢٥٠ جم',    '250g Pack',          'package',     15, 'piece', 1, 100],
+    [6, 'باكيت ٥٠٠ جم',    '500g Pack',          'package',     25, 'piece', 1, 100],
+    [7, 'سكر',             'Sugar',              'ingredient',  30, 'kg',    1, 20],
+    [8, 'هيل',             'Cardamom',           'ingredient', 250, 'kg',    1, 20],
   ],
 };

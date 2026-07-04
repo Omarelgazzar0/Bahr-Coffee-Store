@@ -223,7 +223,7 @@ class SheetsAPI {
 
     this.SH = config.SHEETS;
     this.HEADERS = {
-      [this.SH.CATALOG]:     ['id', 'name_ar', 'name_en', 'type', 'price', 'unit', 'active'],
+      [this.SH.CATALOG]:     ['id', 'name_ar', 'name_en', 'type', 'price', 'unit', 'active', 'stock'],
       [this.SH.CUSTOMERS]:   ['id', 'name', 'mobile', 'address', 'created_at'],
       [this.SH.ORDERS]:      ['id', 'customer_id', 'invoice', 'date', 'payment', 'notes',
                               'subtotal', 'tax_rate', 'tax_amount', 'total', 'created_at', 'preset_name'],
@@ -317,17 +317,20 @@ class SheetsAPI {
         id:     parseInt(item.id),
         price:  parseFloat(item.price),
         active: parseInt(item.active),
+        // Empty string = stock not tracked for this item; otherwise a number
+        stock:  item.stock === '' || item.stock == null ? null : parseFloat(item.stock),
       }));
     }
     return activeOnly ? this._cache.catalog.filter(i => i.active === 1) : this._cache.catalog;
   }
 
-  async addCatalogItem({ name_ar, name_en, type, price, unit }) {
+  async addCatalogItem({ name_ar, name_en, type, price, unit, stock }) {
     const all = await this.getCatalog();
     const id  = this._nextId(all);
-    await this.client.appendRows(this.SH.CATALOG, [[id, name_ar, name_en, type, parseFloat(price), unit, 1]]);
+    const stockVal = (stock === '' || stock == null) ? '' : parseFloat(stock);
+    await this.client.appendRows(this.SH.CATALOG, [[id, name_ar, name_en, type, parseFloat(price), unit, 1, stockVal]]);
     this._invalidate(this.SH.CATALOG);
-    return { id, name_ar, name_en, type, price: parseFloat(price), unit, active: 1 };
+    return { id, name_ar, name_en, type, price: parseFloat(price), unit, active: 1, stock: stockVal === '' ? null : stockVal };
   }
 
   async toggleCatalogItem(id) {
@@ -335,6 +338,37 @@ class SheetsAPI {
     const idx = all.findIndex(i => i.id === id);
     if (idx === -1) throw new Error('Item not found');
     await this.client.updateCell(this.SH.CATALOG, `G${idx + 2}`, all[idx].active === 1 ? 0 : 1);
+    this._invalidate(this.SH.CATALOG);
+  }
+
+  /** Add `amount` to an item's stock (used for restocking). Set stock to a number if it was untracked. */
+  async restockItem(id, amount) {
+    const all = await this.getCatalog();
+    const idx = all.findIndex(i => i.id === id);
+    if (idx === -1) throw new Error('Item not found');
+    const current = all[idx].stock ?? 0;
+    const next = Math.max(0, current + parseFloat(amount));
+    await this.client.updateCell(this.SH.CATALOG, `H${idx + 2}`, next);
+    this._invalidate(this.SH.CATALOG);
+    return next;
+  }
+
+  /** Reduce stock for every catalog item in a sold cart, clamped at 0. */
+  async _decrementStock(cart) {
+    const soldByCatalogId = new Map();
+    for (const item of cart) {
+      if (!item.catalog_id) continue;
+      soldByCatalogId.set(item.catalog_id, (soldByCatalogId.get(item.catalog_id) || 0) + item.quantity);
+    }
+    if (!soldByCatalogId.size) return;
+
+    const all = await this.getCatalog();
+    for (const [catalogId, qtySold] of soldByCatalogId) {
+      const idx = all.findIndex(i => i.id === catalogId);
+      if (idx === -1 || all[idx].stock == null) continue; // not stock-tracked
+      const next = Math.max(0, all[idx].stock - qtySold);
+      await this.client.updateCell(this.SH.CATALOG, `H${idx + 2}`, next);
+    }
     this._invalidate(this.SH.CATALOG);
   }
 
@@ -460,6 +494,9 @@ class SheetsAPI {
       item.name_ar, item.name_en, item.price, item.quantity, item.unit,
       +(item.price * item.quantity).toFixed(2),
     ]));
+
+    // Decrement stock for each catalog item sold (only if it's stock-tracked)
+    await this._decrementStock(cart);
 
     this._invalidate(this.SH.ORDERS);
     this._invalidate(this.SH.ORDER_ITEMS);

@@ -48,8 +48,8 @@ class ThemeManager {
   wire() {
     this.btn?.addEventListener('click', () => {
       this.toggle();
-      if (document.getElementById('page-dashboard')?.classList.contains('active')) {
-        App?._renderDashboardPage();
+      if (document.getElementById('page-customers')?.classList.contains('active')) {
+        App?._renderDashboardCharts();
       }
     });
   }
@@ -195,8 +195,8 @@ class ReceiptModal {
     const esc = ReceiptModal.escapeHtml;
     const fmt = ReceiptModal.formatDate;
 
-    // Keep the data around so the WhatsApp button can build its message
-    this._last = { invoice, date, custName, mobile, grandTotal, totalKg, payment };
+    // Keep full data around so the PDF/WhatsApp share button can rebuild the receipt
+    this._last = { invoice, date, custName, mobile, address, taxRate, subtotal, taxAmount, grandTotal, totalKg, payment, presetName };
 
     this.content.innerHTML = `
       <div class="rp-brand">
@@ -234,27 +234,129 @@ class ReceiptModal {
     this.overlay?.classList.add('open');
   }
 
-  /** Build a wa.me deep link with the receipt summary pre-filled. */
-  shareOnWhatsApp() {
+  /** Build a one-page PDF replicating the receipt (name/address/mobile/weight/total only). */
+  buildPDF() {
+    const { invoice, date, custName, mobile, address, grandTotal, totalKg, payment } = this._last;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: [80, 150] }); // narrow receipt-style page
+
+    let y = 14;
+    const centerX = 40;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('Bahr Coffee Store', centerX, y, { align: 'center' });
+    y += 5;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(9);
+    doc.text('rise & grind', centerX, y, { align: 'center' });
+    y += 6;
+
+    doc.setDrawColor(180);
+    doc.line(6, y, 74, y);
+    y += 7;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    const row = (label, value) => {
+      doc.setFont('helvetica', 'bold');
+      doc.text(label, 6, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(value), 74, y, { align: 'right' });
+      y += 6;
+    };
+
+    row('Invoice:', invoice);
+    row('Date:', ReceiptModal.formatDate(date));
+    row('Payment:', payment);
+    y += 2;
+    doc.line(6, y, 74, y);
+    y += 7;
+
+    row('Customer:', custName);
+    if (mobile)  row('Mobile:', mobile);
+    if (address) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Address:', 6, y);
+      y += 5;
+      doc.setFont('helvetica', 'normal');
+      const lines = doc.splitTextToSize(address, 68);
+      lines.forEach(line => { doc.text(line, 6, y); y += 5; });
+      y += 1;
+    }
+
+    y += 2;
+    doc.line(6, y, 74, y);
+    y += 7;
+
+    row('Total Weight:', `${Number(totalKg).toFixed(3)} kg`);
+    y += 2;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('TOTAL DUE:', 6, y);
+    doc.text(`EGP ${Number(grandTotal).toFixed(2)}`, 74, y, { align: 'right' });
+    y += 10;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text('Thank you for choosing Bahr Coffee Store', centerX, y, { align: 'center' });
+    y += 4;
+    doc.text('Rise & Grind — Every Cup Counts', centerX, y, { align: 'center' });
+
+    return doc;
+  }
+
+  /**
+   * Share the receipt as a real PDF file via the device's native share
+   * sheet (lets the person pick WhatsApp and attach the actual file).
+   * Falls back to downloading the PDF + opening a WhatsApp text message
+   * on browsers that don't support sharing files (mainly desktop).
+   */
+  async shareReceiptPDF() {
     if (!this._last) return;
-    const { invoice, date, custName, grandTotal, totalKg, payment } = this._last;
+    const { invoice, mobile } = this._last;
 
-    // Egyptian numbers: strip leading 0, prefix with country code 20
-    let phone = (this._last.mobile || '').replace(/[^\d]/g, '');
+    let doc;
+    try {
+      doc = this.buildPDF();
+    } catch (e) {
+      App?.toast.show('Could not build PDF: ' + e.message, 'error');
+      return;
+    }
+
+    const filename = `Receipt-${invoice}.pdf`;
+    const blob = doc.output('blob');
+    const file = new File([blob], filename, { type: 'application/pdf' });
+
+    // Preferred path: native share sheet with the real PDF attached
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: 'Bahr Coffee Store Receipt',
+          text: `Receipt ${invoice} — Bahr Coffee Store`,
+        });
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return; // user cancelled the share sheet
+        // fall through to the download fallback below
+      }
+    }
+
+    // Fallback (desktop / unsupported browsers): download PDF, then open
+    // WhatsApp with a text message — the person attaches the file manually.
+    doc.save(filename);
+
+    let phone = (mobile || '').replace(/[^\d]/g, '');
     if (phone.startsWith('0')) phone = phone.slice(1);
-    if (!phone.startsWith('20')) phone = '20' + phone;
+    if (phone && !phone.startsWith('20')) phone = '20' + phone;
 
-    const message =
-      `☕ *Bahr Coffee Store*\n` +
-      `Invoice: ${invoice}\n` +
-      `Date: ${ReceiptModal.formatDate(date)}\n` +
-      `Customer: ${custName}\n` +
-      `Weight: ${Number(totalKg).toFixed(3)} kg\n` +
-      `Payment: ${payment}\n` +
-      `*Total: EGP ${Number(grandTotal).toFixed(2)}*\n\n` +
-      `Thank you for choosing Bahr Coffee Store! 🌟`;
+    const message = `☕ *Bahr Coffee Store* — Receipt ${invoice} attached as PDF. Thank you! 🌟`;
+    const url = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`;
 
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    App?.toast.show('PDF downloaded — attach it in the WhatsApp chat that just opened');
     window.open(url, '_blank');
   }
 
@@ -429,8 +531,8 @@ class AppController {
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
-        if (document.getElementById('page-dashboard')?.classList.contains('active')) {
-          this._renderDashboardPage();
+        if (document.getElementById('page-customers')?.classList.contains('active')) {
+          this._renderDashboardCharts();
         }
       }, 250);
     });
@@ -481,7 +583,6 @@ class AppController {
     if (page === 'customers') this._renderCustomersPage();
     if (page === 'orders')    this._renderOrdersPage();
     if (page === 'catalog')   Catalog.buildCatalogTable();
-    if (page === 'dashboard') this._renderDashboardPage();
   }
 
   // ── Tax field sync ─────────────────────────────────────────────
@@ -639,14 +740,16 @@ class AppController {
     const type    = document.getElementById('newItemType')?.value;
     const price   = parseFloat(document.getElementById('newItemPrice')?.value);
     const unit    = document.getElementById('newItemUnit')?.value;
+    const stockRaw = document.getElementById('newItemStock')?.value;
+    const stock   = stockRaw?.trim() === '' ? '' : parseFloat(stockRaw);
 
     if (!name_ar) return this.toast.show('Arabic name required', 'error');
     if (!name_en) return this.toast.show('English name required', 'error');
     if (isNaN(price) || price < 0) return this.toast.show('Valid price required', 'error');
 
     try {
-      await Sheets.addCatalogItem({ name_ar, name_en, type, price, unit });
-      ['newItemNameAr', 'newItemNameEn', 'newItemPrice'].forEach(id => {
+      await Sheets.addCatalogItem({ name_ar, name_en, type, price, unit, stock });
+      ['newItemNameAr', 'newItemNameEn', 'newItemPrice', 'newItemStock'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
       });
@@ -662,15 +765,10 @@ class AppController {
 
   async _renderCustomersPage() {
     try {
+      // Dashboard stats + charts + top customers now live on this page
+      await this._renderDashboardCharts();
+
       const customers = await Sheets.getAllCustomers();
-      const totalSpent = customers.reduce((sum, c) => sum + c.total_spent, 0);
-      const avgSpent   = customers.length ? totalSpent / customers.length : 0;
-
-      document.getElementById('customerStats').innerHTML = `
-        <div class="stat-card"><div class="stat-value">${customers.length}</div><div class="stat-label">Customers</div></div>
-        <div class="stat-card"><div class="stat-value">EGP ${Math.round(totalSpent).toLocaleString('en-EG')}</div><div class="stat-label">Total Revenue</div></div>
-        <div class="stat-card"><div class="stat-value">EGP ${Math.round(avgSpent).toLocaleString('en-EG')}</div><div class="stat-label">Avg / Customer</div></div>`;
-
       const esc = ReceiptModal.escapeHtml;
       const fmt = ReceiptModal.formatDate;
 
@@ -695,9 +793,9 @@ class AppController {
 
   // ── Orders page ────────────────────────────────────────────────
 
-  // ── Dashboard ──────────────────────────────────────────────────
+  // ── Dashboard (merged into the Customers page) ────────────────
 
-  async _renderDashboardPage() {
+  async _renderDashboardCharts() {
     try {
       const orders    = await Sheets.getAllOrders();
       const customers = await Sheets.getAllCustomers();

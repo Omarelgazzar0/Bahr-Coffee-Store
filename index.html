@@ -34,7 +34,6 @@
 
             <nav id="mainNav">
                 <button class="nav-btn active" data-page="pos"><span class="nav-icon">🧾</span> POS</button>
-                <button class="nav-btn" data-page="dashboard"><span class="nav-icon">📊</span> Dashboard</button>
                 <button class="nav-btn" data-page="catalog"><span class="nav-icon">📦</span> Catalog</button>
                 <button class="nav-btn" data-page="customers"><span class="nav-icon">👥</span> Customers</button>
                 <button class="nav-btn" data-page="orders"><span class="nav-icon">📋</span> Orders</button>
@@ -153,7 +152,7 @@
                             </select>
                         </div>
                     </div>
-                    <div class="form-row three-col">
+                    <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.75rem">
                         <div class="field"><label for="newItemPrice">Price (EGP per unit)</label><input id="newItemPrice" type="number" min="0" step="1" placeholder="440"/></div>
                         <div class="field"><label for="newItemUnit">Unit</label>
                             <select id="newItemUnit">
@@ -163,6 +162,7 @@
                                 <option value="pack">pack</option>
                             </select>
                         </div>
+                        <div class="field"><label for="newItemStock">Initial Stock (optional)</label><input id="newItemStock" type="number" min="0" step="1" placeholder="e.g. 25"/></div>
                         <div class="field" style="display:flex;align-items:flex-end">
                             <button class="btn btn-primary" id="btnAddItem" style="width:100%">＋ Add Item</button>
                         </div>
@@ -172,8 +172,8 @@
                       <div class="card-label">Current Catalog</div>
                       <div class="table-wrap">
                           <table>
-                              <thead><tr><th>#</th><th>Arabic Name</th><th>English Name</th><th>Type</th><th>Price</th><th>Unit</th><th>Status</th><th>Actions</th></tr></thead>
-                              <tbody id="catalogTableBody"><tr><td colspan="8" class="table-empty">Loading…</td></tr></tbody>
+                              <thead><tr><th>#</th><th>Arabic Name</th><th>English Name</th><th>Type</th><th>Price</th><th>Unit</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
+                              <tbody id="catalogTableBody"><tr><td colspan="9" class="table-empty">Loading…</td></tr></tbody>
                           </table>
                     </div>
                 </section>
@@ -182,29 +182,6 @@
 
         <!--=============== PAGE: CUSTOMERS ===============-->
         <div id="page-customers" class="page">
-            <div class="inner-page">
-                <div class="stats-row" id="customerStats"></div>
-                <section class="card">
-                    <div class="card-label">
-                        Customer Database
-                        <!-- Export to CSV — opens cleanly in Excel and Access -->
-                        <button class="btn btn-primary btn-sm export-csv-btn"
-                                style="margin-left:auto;width:auto">
-                          📥 Export to Excel / Access
-                        </button>
-                    </div>
-                    <div class="table-wrap">
-                        <table>
-                            <thead><tr><th>#</th><th>Name</th><th>Mobile</th><th>Address</th><th>Orders</th><th>Total Spent</th><th>Since</th><th>Actions</th></tr></thead>
-                            <tbody id="customerTableBody"><tr><td colspan="8" class="table-empty">Loading…</td></tr></tbody>
-                        </table>
-                    </div>
-                </section>
-            </div>
-        </div>
-
-        <!--=============== PAGE: DASHBOARD ===============-->
-        <div id="page-dashboard" class="page">
             <div class="inner-page">
                 <div class="stats-row" id="dashboardStats"></div>
                 <section class="card">
@@ -225,6 +202,22 @@
                         <table>
                             <thead><tr><th>#</th><th>Name</th><th>Orders</th><th>Total Spent</th></tr></thead>
                             <tbody id="topCustomersBody"><tr><td colspan="4" class="table-empty">Loading…</td></tr></tbody>
+                        </table>
+                    </div>
+                </section>
+                <section class="card">
+                    <div class="card-label">
+                        Customer Database
+                        <!-- Export to CSV — opens cleanly in Excel and Access -->
+                        <button class="btn btn-primary btn-sm export-csv-btn"
+                                style="margin-left:auto;width:auto">
+                          📥 Export to Excel / Access
+                        </button>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>#</th><th>Name</th><th>Mobile</th><th>Address</th><th>Orders</th><th>Total Spent</th><th>Since</th><th>Actions</th></tr></thead>
+                            <tbody id="customerTableBody"><tr><td colspan="8" class="table-empty">Loading…</td></tr></tbody>
                         </table>
                     </div>
                 </section>
@@ -262,7 +255,7 @@
                 </div>
                 <div class="modal-actions">
                     <button class="btn btn-primary" onclick="window.print()">🖨 Print Receipt</button>
-                    <button class="btn btn-whatsapp" id="btnShareWhatsApp" onclick="App.receipt.shareOnWhatsApp()">💬 WhatsApp</button>
+                    <button class="btn btn-whatsapp" id="btnShareWhatsApp" onclick="App.receipt.shareReceiptPDF()">💬 Share PDF via WhatsApp</button>
                     <button class="btn btn-ghost" id="btnCloseModal2">Close</button>
                 </div>
             </div>
@@ -275,7 +268,6 @@
 
         <nav id="bottomNav" class="bottom-nav">
             <button class="bottom-nav-btn active" data-page="pos"><span>🧾</span><span>POS</span></button>
-            <button class="bottom-nav-btn" data-page="dashboard"><span>📊</span><span>Stats</span></button>
             <button class="bottom-nav-btn" data-page="catalog"><span>📦</span><span>Catalog</span></button>
             <button class="bottom-nav-btn" data-page="customers"><span>👥</span><span>Customers</span></button>
             <button class="bottom-nav-btn" data-page="orders"><span>📋</span><span>Orders</span></button>
@@ -284,6 +276,9 @@
         <div id="toastEl"></div>
 
         <!-- Scripts: config first, then sheets, catalog, app -->
+        <!--=============== jsPDF (for PDF receipt generation) ===============-->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
         <script src="js/config.js"></script>
         <script src="js/sheets.js"></script>
         <script src="js/catalog.js"></script>

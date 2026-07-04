@@ -457,6 +457,15 @@ select option { background: var(--deep); }
 
 .card-price .price-unit { font-size: 0.65rem; color: var(--muted); }
 
+.stock-badge {
+	display: inline-block;
+	margin-top: 0.35rem;
+	font-size: 0.65rem;
+	font-family: var(--font-mono);
+	color: var(--muted-lt);
+}
+.stock-badge.stock-low { color: var(--red); font-weight: 700; }
+
 .qty-row {
 	display: flex; align-items: center; justify-content: space-between;
 	margin-top: 0.75rem; padding-top: 0.75rem;
