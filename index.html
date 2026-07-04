@@ -255,7 +255,6 @@
                 </div>
                 <div class="modal-actions">
                     <button class="btn btn-primary" onclick="window.print()">🖨 Print Receipt</button>
-                    <button class="btn btn-whatsapp" id="btnShareWhatsApp" onclick="App.receipt.shareReceiptPDF()">💬 Share PDF via WhatsApp</button>
                     <button class="btn btn-ghost" id="btnCloseModal2">Close</button>
                 </div>
             </div>
@@ -276,9 +275,6 @@
         <div id="toastEl"></div>
 
         <!-- Scripts: config first, then sheets, catalog, app -->
-        <!--=============== jsPDF (for PDF receipt generation) ===============-->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
         <script src="js/config.js"></script>
         <script src="js/sheets.js"></script>
         <script src="js/catalog.js"></script>

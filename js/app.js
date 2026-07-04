@@ -195,9 +195,6 @@ class ReceiptModal {
     const esc = ReceiptModal.escapeHtml;
     const fmt = ReceiptModal.formatDate;
 
-    // Keep full data around so the PDF/WhatsApp share button can rebuild the receipt
-    this._last = { invoice, date, custName, mobile, address, taxRate, subtotal, taxAmount, grandTotal, totalKg, payment, presetName };
-
     this.content.innerHTML = `
       <div class="rp-brand">
         <h2>Bahr Coffee Store</h2>
@@ -227,128 +224,7 @@ class ReceiptModal {
       </div>
       <div class="rp-footer">☕ Thank you for choosing Bahr Coffee Store ☕<br/>Rise &amp; Grind — Every Cup Counts</div>`;
 
-    // Show/hide the WhatsApp button depending on whether we have a mobile number
-    const waBtn = document.getElementById('btnShareWhatsApp');
-    if (waBtn) waBtn.style.display = mobile ? '' : 'none';
-
     this.overlay?.classList.add('open');
-  }
-
-  /** Build a one-page PDF replicating the receipt (name/address/mobile/weight/total only). */
-  buildPDF() {
-    const { invoice, date, custName, mobile, address, grandTotal, totalKg, payment } = this._last;
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: 'mm', format: [80, 150] }); // narrow receipt-style page
-
-    let y = 14;
-    const centerX = 40;
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text('Bahr Coffee Store', centerX, y, { align: 'center' });
-    y += 5;
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(9);
-    doc.text('rise & grind', centerX, y, { align: 'center' });
-    y += 6;
-
-    doc.setDrawColor(180);
-    doc.line(6, y, 74, y);
-    y += 7;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    const row = (label, value) => {
-      doc.setFont('helvetica', 'bold');
-      doc.text(label, 6, y);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(value), 74, y, { align: 'right' });
-      y += 6;
-    };
-
-    row('Invoice:', invoice);
-    row('Date:', ReceiptModal.formatDate(date));
-    row('Payment:', payment);
-    y += 2;
-    doc.line(6, y, 74, y);
-    y += 7;
-
-    row('Customer:', custName);
-    if (mobile)  row('Mobile:', mobile);
-    if (address) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Address:', 6, y);
-      y += 5;
-      doc.setFont('helvetica', 'normal');
-      const lines = doc.splitTextToSize(address, 68);
-      lines.forEach(line => { doc.text(line, 6, y); y += 5; });
-      y += 1;
-    }
-
-    y += 2;
-    doc.line(6, y, 74, y);
-    y += 7;
-
-    row('Total Weight:', `${Number(totalKg).toFixed(3)} kg`);
-    y += 2;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text('TOTAL DUE:', 6, y);
-    doc.text(`EGP ${Number(grandTotal).toFixed(2)}`, 74, y, { align: 'right' });
-    y += 10;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.text('Thank you for choosing Bahr Coffee Store', centerX, y, { align: 'center' });
-    y += 4;
-    doc.text('Rise & Grind — Every Cup Counts', centerX, y, { align: 'center' });
-
-    return doc;
-  }
-
-  /**
-   * Open the customer's specific WhatsApp chat and download the receipt PDF
-   * so it's the newest file ready to attach.
-   *
-   * Note on what's technically possible: no browser can auto-attach a file
-   * into a specific WhatsApp contact's chat — both iOS and Android block
-   * that for security/privacy, and the only way around it is WhatsApp's
-   * paid Business API (a separate server-side system). This is the most
-   * reliable flow achievable from a plain website: it deep-links straight
-   * into the right chat, and the PDF is downloaded right after so it's one
-   * tap (📎 → Recent) away from being sent.
-   */
-  shareReceiptPDF() {
-    if (!this._last) return;
-    const { invoice, mobile } = this._last;
-
-    if (!mobile) {
-      App?.toast.show('No mobile number on file for this customer', 'error');
-      return;
-    }
-
-    // Download the PDF FIRST, while the browser tab still has focus.
-    // If we open WhatsApp before this, the app-switch on mobile can
-    // interrupt or silently drop the download.
-    try {
-      const doc = this.buildPDF();
-      doc.save(`Receipt-${invoice}.pdf`);
-    } catch (e) {
-      App?.toast.show('Could not build PDF: ' + e.message, 'error');
-      return;
-    }
-
-    // Now open the customer's specific WhatsApp chat.
-    // This stays synchronous (no setTimeout/await before it) because
-    // mobile Safari revokes the "real user click" permission the
-    // instant the call stack becomes async — an async gap here would
-    // make window.open silently fail as a blocked popup.
-    let phone = mobile.replace(/[^\d]/g, '');
-    if (phone.startsWith('0')) phone = phone.slice(1);
-    if (!phone.startsWith('20')) phone = '20' + phone;
-    window.open(`https://wa.me/${phone}`, '_blank');
-
-    App?.toast.show('✓ PDF downloaded — WhatsApp is opening. Tap 📎 and attach it.');
   }
 
   close() {
