@@ -327,22 +327,28 @@ class ReceiptModal {
       return;
     }
 
-    // Open the WhatsApp chat FIRST and synchronously (still inside the
-    // click handler) — waiting until after any async work risks the
-    // browser treating it as a blocked popup instead of a real click.
+    // Download the PDF FIRST, while the browser tab still has focus.
+    // If we open WhatsApp before this, the app-switch on mobile can
+    // interrupt or silently drop the download.
+    try {
+      const doc = this.buildPDF();
+      doc.save(`Receipt-${invoice}.pdf`);
+    } catch (e) {
+      App?.toast.show('Could not build PDF: ' + e.message, 'error');
+      return;
+    }
+
+    // Now open the customer's specific WhatsApp chat.
+    // This stays synchronous (no setTimeout/await before it) because
+    // mobile Safari revokes the "real user click" permission the
+    // instant the call stack becomes async — an async gap here would
+    // make window.open silently fail as a blocked popup.
     let phone = mobile.replace(/[^\d]/g, '');
     if (phone.startsWith('0')) phone = phone.slice(1);
     if (!phone.startsWith('20')) phone = '20' + phone;
     window.open(`https://wa.me/${phone}`, '_blank');
 
-    // Now build and download the PDF so it's ready to attach
-    try {
-      const doc = this.buildPDF();
-      doc.save(`Receipt-${invoice}.pdf`);
-      App?.toast.show('✓ Chat opened — tap 📎 and attach the PDF that just downloaded');
-    } catch (e) {
-      App?.toast.show('Could not build PDF: ' + e.message, 'error');
-    }
+    App?.toast.show('✓ PDF downloaded — WhatsApp is opening. Tap 📎 and attach it.');
   }
 
   close() {
