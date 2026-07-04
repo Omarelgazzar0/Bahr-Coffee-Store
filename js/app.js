@@ -157,6 +157,9 @@ class ReceiptModal {
     const esc = ReceiptModal.escapeHtml;
     const fmt = ReceiptModal.formatDate;
 
+    // Keep the data around so the WhatsApp button can build its message
+    this._last = { invoice, date, custName, mobile, grandTotal, totalKg, payment };
+
     this.content.innerHTML = `
       <div class="rp-brand">
         <h2>Bahr Coffee Store</h2>
@@ -186,7 +189,35 @@ class ReceiptModal {
       </div>
       <div class="rp-footer">☕ Thank you for choosing Bahr Coffee Store ☕<br/>Rise &amp; Grind — Every Cup Counts</div>`;
 
+    // Show/hide the WhatsApp button depending on whether we have a mobile number
+    const waBtn = document.getElementById('btnShareWhatsApp');
+    if (waBtn) waBtn.style.display = mobile ? '' : 'none';
+
     this.overlay?.classList.add('open');
+  }
+
+  /** Build a wa.me deep link with the receipt summary pre-filled. */
+  shareOnWhatsApp() {
+    if (!this._last) return;
+    const { invoice, date, custName, grandTotal, totalKg, payment } = this._last;
+
+    // Egyptian numbers: strip leading 0, prefix with country code 20
+    let phone = (this._last.mobile || '').replace(/[^\d]/g, '');
+    if (phone.startsWith('0')) phone = phone.slice(1);
+    if (!phone.startsWith('20')) phone = '20' + phone;
+
+    const message =
+      `☕ *Bahr Coffee Store*\n` +
+      `Invoice: ${invoice}\n` +
+      `Date: ${ReceiptModal.formatDate(date)}\n` +
+      `Customer: ${custName}\n` +
+      `Weight: ${Number(totalKg).toFixed(3)} kg\n` +
+      `Payment: ${payment}\n` +
+      `*Total: EGP ${Number(grandTotal).toFixed(2)}*\n\n` +
+      `Thank you for choosing Bahr Coffee Store! 🌟`;
+
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
   }
 
   close() {
@@ -353,6 +384,17 @@ class AppController {
     this.receipt.wireCloseButtons();
     this.drawer.wireSwipeToClose();
 
+    // Redraw dashboard charts on resize (canvas pixel size is fixed at draw time)
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (document.getElementById('page-dashboard')?.classList.contains('active')) {
+          this._renderDashboardPage();
+        }
+      }, 250);
+    });
+
     document.querySelectorAll('.pill').forEach(pill =>
       pill.addEventListener('click', () => {
         document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
@@ -399,6 +441,7 @@ class AppController {
     if (page === 'customers') this._renderCustomersPage();
     if (page === 'orders')    this._renderOrdersPage();
     if (page === 'catalog')   Catalog.buildCatalogTable();
+    if (page === 'dashboard') this._renderDashboardPage();
   }
 
   // ── Tax field sync ─────────────────────────────────────────────
@@ -611,6 +654,113 @@ class AppController {
   }
 
   // ── Orders page ────────────────────────────────────────────────
+
+  // ── Dashboard ──────────────────────────────────────────────────
+
+  async _renderDashboardPage() {
+    try {
+      const orders    = await Sheets.getAllOrders();
+      const customers = await Sheets.getAllCustomers();
+
+      const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
+      const totalWeight  = orders.reduce((sum, o) => sum + (o.total_weight || 0), 0);
+      const avgOrder     = orders.length ? totalRevenue / orders.length : 0;
+
+      document.getElementById('dashboardStats').innerHTML = `
+        <div class="stat-card"><div class="stat-value">${orders.length}</div><div class="stat-label">Total Orders</div></div>
+        <div class="stat-card"><div class="stat-value">EGP ${Math.round(totalRevenue).toLocaleString('en-EG')}</div><div class="stat-label">Total Revenue</div></div>
+        <div class="stat-card"><div class="stat-value">${Number(totalWeight).toFixed(2)} kg</div><div class="stat-label">Coffee Sold</div></div>
+        <div class="stat-card"><div class="stat-value">EGP ${Math.round(avgOrder).toLocaleString('en-EG')}</div><div class="stat-label">Avg / Order</div></div>`;
+
+      // Build the last 14 days as YYYY-MM-DD, oldest first
+      const days = [];
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        days.push(d.toISOString().split('T')[0]);
+      }
+
+      const revenueByDay = days.map(day =>
+        orders.filter(o => o.date === day).reduce((sum, o) => sum + o.total, 0)
+      );
+      const weightByDay = days.map(day =>
+        orders.filter(o => o.date === day).reduce((sum, o) => sum + (o.total_weight || 0), 0)
+      );
+
+      const dayLabels = days.map(d => d.slice(5).replace('-', '/')); // MM/DD
+
+      this._drawBarChart('revenueChart', revenueByDay, dayLabels, v => `${Math.round(v)}`);
+      this._drawBarChart('weightChart',  weightByDay,  dayLabels, v => v.toFixed(1));
+
+      // Top 5 customers by total spent
+      const top = [...customers].sort((a, b) => b.total_spent - a.total_spent).slice(0, 5);
+      const esc = ReceiptModal.escapeHtml;
+
+      document.getElementById('topCustomersBody').innerHTML = !top.length
+        ? `<tr><td colspan="4" class="table-empty">No customers yet</td></tr>`
+        : top.map((c, i) => `
+            <tr>
+              <td><span class="badge badge-amber">${i + 1}</span></td>
+              <td>${esc(c.name)}</td>
+              <td><span class="badge badge-teal">${c.order_count}</span></td>
+              <td class="mono" style="color:var(--white)">EGP ${Number(c.total_spent).toFixed(2)}</td>
+            </tr>`).join('');
+
+    } catch (e) {
+      this.toast.show('Dashboard load failed: ' + e.message, 'error');
+    }
+  }
+
+  /** Minimal dependency-free bar chart drawn straight onto a <canvas>. */
+  _drawBarChart(canvasId, values, labels, formatValue) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    // Match the canvas's internal resolution to its displayed size (crisp on retina)
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width  = rect.width  * dpr;
+    canvas.height = rect.height * dpr;
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    const W = rect.width, H = rect.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const max = Math.max(...values, 0.0001);
+    const padding = { top: 20, bottom: 28, left: 8, right: 8 };
+    const chartW = W - padding.left - padding.right;
+    const chartH = H - padding.top - padding.bottom;
+    const barGap = 4;
+    const barW = (chartW / values.length) - barGap;
+
+    values.forEach((val, i) => {
+      const barH = (val / max) * chartH;
+      const x = padding.left + i * (barW + barGap);
+      const y = padding.top + (chartH - barH);
+
+      ctx.fillStyle = val > 0 ? '#ffffff' : 'rgba(255,255,255,0.08)';
+      ctx.fillRect(x, y, barW, barH);
+
+      // Value label above the bar (only if it fits and is non-zero)
+      if (val > 0 && barW > 14) {
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(formatValue(val), x + barW / 2, y - 4);
+      }
+
+      // Day label below the axis (skip every other one on narrow screens)
+      const showLabel = values.length <= 14 || i % 2 === 0;
+      if (showLabel) {
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.font = '8px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(labels[i], x + barW / 2, H - 10);
+      }
+    });
+  }
+
 
   async _renderOrdersPage() {
     try {

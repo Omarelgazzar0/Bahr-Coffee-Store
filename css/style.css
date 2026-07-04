@@ -514,6 +514,9 @@ select option { background: var(--deep); }
 .btn-primary { background: var(--white); color: var(--ink); }
 .btn-primary:hover { background: var(--text); transform: translateY(-1px); }
 
+.btn-whatsapp { background: #25D366; color: #06210F; }
+.btn-whatsapp:hover { background: #1EBE5A; transform: translateY(-1px); }
+
 /* Ghost: outlined */
 .btn-ghost {
 	background: transparent; border: 1px solid var(--border); color: var(--muted-lt);

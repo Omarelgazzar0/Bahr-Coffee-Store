@@ -25,6 +25,7 @@
 
             <nav id="mainNav">
                 <button class="nav-btn active" data-page="pos"><span class="nav-icon">🧾</span> POS</button>
+                <button class="nav-btn" data-page="dashboard"><span class="nav-icon">📊</span> Dashboard</button>
                 <button class="nav-btn" data-page="catalog"><span class="nav-icon">📦</span> Catalog</button>
                 <button class="nav-btn" data-page="customers"><span class="nav-icon">👥</span> Customers</button>
                 <button class="nav-btn" data-page="orders"><span class="nav-icon">📋</span> Orders</button>
@@ -188,6 +189,34 @@
             </div>
         </div>
 
+        <!--=============== PAGE: DASHBOARD ===============-->
+        <div id="page-dashboard" class="page">
+            <div class="inner-page">
+                <div class="stats-row" id="dashboardStats"></div>
+                <section class="card">
+                    <div class="card-label">
+                        Revenue — Last 14 Days
+                    </div>
+                    <canvas id="revenueChart" style="width:100%;height:220px;display:block"></canvas>
+                </section>
+                <section class="card">
+                    <div class="card-label">
+                        Coffee Sold (kg) — Last 14 Days
+                    </div>
+                    <canvas id="weightChart" style="width:100%;height:220px;display:block"></canvas>
+                </section>
+                <section class="card">
+                    <div class="card-label">Top Customers</div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>#</th><th>Name</th><th>Orders</th><th>Total Spent</th></tr></thead>
+                            <tbody id="topCustomersBody"><tr><td colspan="4" class="table-empty">Loading…</td></tr></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+
         <!--=============== PAGE: ORDERS ===============-->
         <div id="page-orders" class="page">
             <div class="inner-page">
@@ -219,6 +248,7 @@
                 </div>
                 <div class="modal-actions">
                     <button class="btn btn-primary" onclick="window.print()">🖨 Print Receipt</button>
+                    <button class="btn btn-whatsapp" id="btnShareWhatsApp" onclick="App.receipt.shareOnWhatsApp()">💬 WhatsApp</button>
                     <button class="btn btn-ghost" id="btnCloseModal2">Close</button>
                 </div>
             </div>
@@ -231,6 +261,7 @@
 
         <nav id="bottomNav" class="bottom-nav">
             <button class="bottom-nav-btn active" data-page="pos"><span>🧾</span><span>POS</span></button>
+            <button class="bottom-nav-btn" data-page="dashboard"><span>📊</span><span>Stats</span></button>
             <button class="bottom-nav-btn" data-page="catalog"><span>📦</span><span>Catalog</span></button>
             <button class="bottom-nav-btn" data-page="customers"><span>👥</span><span>Customers</span></button>
             <button class="bottom-nav-btn" data-page="orders"><span>📋</span><span>Orders</span></button>
