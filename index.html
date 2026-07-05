@@ -88,6 +88,33 @@
                         </div>
                     </section>
 
+                    <section class="card" id="subscriptionsCard">
+                        <div class="card-label">🔁 Recurring Orders</div>
+
+                        <div id="subscriptionsDue"></div>
+
+                        <div class="sub-create-form">
+                            <div class="form-row two-col">
+                                <div class="field"><label for="subName">Customer Name</label><input id="subName" type="text" placeholder="e.g. Ahmed"/></div>
+                                <div class="field"><label for="subMobile">Mobile</label><input id="subMobile" type="tel" placeholder="+20 1XX XXX XXXX"/></div>
+                            </div>
+                            <div class="form-row two-col">
+                                <div class="field"><label for="subPreset">Preset</label>
+                                    <select id="subPreset"><option value="">— choose a saved preset —</option></select>
+                                </div>
+                                <div class="field"><label for="subFrequency">Repeat every (days)</label><input id="subFrequency" type="number" min="1" value="7"/></div>
+                            </div>
+                            <button class="btn btn-primary" id="btnAddSubscription" style="width:100%">＋ Add Recurring Order</button>
+                        </div>
+
+                        <div class="table-wrap" style="margin-top:1rem">
+                            <table>
+                                <thead><tr><th>Customer</th><th>Preset</th><th>Every</th><th>Next Due</th><th>Actions</th></tr></thead>
+                                <tbody id="subscriptionsBody"><tr><td colspan="5" class="table-empty">No recurring orders yet</td></tr></tbody>
+                            </table>
+                        </div>
+                    </section>
+
                     <section class="card">
                         <div class="card-label">Order Settings</div>
                         <div class="form-row two-col">
@@ -211,6 +238,12 @@
                             <thead><tr><th>#</th><th>Name</th><th>Orders</th><th>Total Spent</th></tr></thead>
                             <tbody id="topCustomersBody"><tr><td colspan="4" class="table-empty">Loading…</td></tr></tbody>
                         </table>
+                    </div>
+                </section>
+                <section class="card">
+                    <div class="card-label">Top Products — This Month</div>
+                    <div id="topProductsList" class="top-products-list">
+                        <p class="table-empty">Loading…</p>
                     </div>
                 </section>
                 <section class="card">

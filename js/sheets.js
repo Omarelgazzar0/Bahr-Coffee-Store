@@ -230,10 +230,11 @@ class SheetsAPI {
       [this.SH.ORDER_ITEMS]: ['id', 'order_id', 'catalog_id', 'name_ar', 'name_en',
                               'price', 'quantity', 'unit', 'line_total'],
       [this.SH.PRESETS]:     ['id', 'name', 'items_json', 'created_at'],
+      [this.SH.SUBSCRIPTIONS]: ['id', 'customer_name', 'customer_mobile', 'preset_name', 'frequency_days', 'next_due', 'created_at'],
     };
 
     // In-memory cache — cleared per-sheet after any write
-    this._cache = { catalog: null, customers: null, orders: null, items: null, presets: null };
+    this._cache = { catalog: null, customers: null, orders: null, items: null, presets: null, subscriptions: null };
   }
 
   // ── Bootstrapping ────────────────────────────────────────────────
@@ -305,6 +306,7 @@ class SheetsAPI {
     if (sheetName === this.SH.ORDERS)      this._cache.orders    = null;
     if (sheetName === this.SH.ORDER_ITEMS) this._cache.items     = null;
     if (sheetName === this.SH.PRESETS)     this._cache.presets   = null;
+    if (sheetName === this.SH.SUBSCRIPTIONS) this._cache.subscriptions = null;
   }
 
   // ── CATALOG ────────────────────────────────────────────────────
@@ -465,6 +467,54 @@ class SheetsAPI {
     if (rowIdx === -1) throw new Error('Preset not found');
     await this.client.deleteRow(this.SH.PRESETS, rowIdx + 2);
     this._invalidate(this.SH.PRESETS);
+  }
+
+  // ── SUBSCRIPTIONS (recurring orders) ────────────────────────────
+
+  async getAllSubscriptions() {
+    if (!this._cache.subscriptions) {
+      const rows = await this.client.readRange(this.SH.SUBSCRIPTIONS);
+      this._cache.subscriptions = this._rowsToObjects(rows, this.SH.SUBSCRIPTIONS).map(s => ({
+        ...s,
+        id: parseInt(s.id),
+        frequency_days: parseInt(s.frequency_days),
+      }));
+    }
+    return [...this._cache.subscriptions].reverse();
+  }
+
+  async addSubscription({ customer_name, customer_mobile, preset_name, frequency_days, next_due }) {
+    const all = await this.getAllSubscriptions();
+    const id  = this._nextId(all);
+    await this.client.appendRows(this.SH.SUBSCRIPTIONS, [[
+      id, customer_name, customer_mobile, preset_name, frequency_days, next_due, this._timestamp(),
+    ]]);
+    this._invalidate(this.SH.SUBSCRIPTIONS);
+    return id;
+  }
+
+  /** Push a subscription's next_due forward by its own frequency (called after its order is placed). */
+  async advanceSubscription(id) {
+    const rawRows = this._rowsToObjects(await this.client.readRange(this.SH.SUBSCRIPTIONS), this.SH.SUBSCRIPTIONS);
+    const idx = rawRows.findIndex(s => parseInt(s.id) === parseInt(id));
+    if (idx === -1) throw new Error('Subscription not found');
+
+    const freq = parseInt(rawRows[idx].frequency_days) || 7;
+    const next = new Date();
+    next.setDate(next.getDate() + freq);
+    const nextDue = next.toISOString().split('T')[0];
+
+    await this.client.updateCell(this.SH.SUBSCRIPTIONS, `F${idx + 2}`, nextDue); // F = next_due
+    this._invalidate(this.SH.SUBSCRIPTIONS);
+    return nextDue;
+  }
+
+  async deleteSubscription(id) {
+    const rawRows = this._rowsToObjects(await this.client.readRange(this.SH.SUBSCRIPTIONS), this.SH.SUBSCRIPTIONS);
+    const idx = rawRows.findIndex(s => parseInt(s.id) === parseInt(id));
+    if (idx === -1) throw new Error('Subscription not found');
+    await this.client.deleteRow(this.SH.SUBSCRIPTIONS, idx + 2);
+    this._invalidate(this.SH.SUBSCRIPTIONS);
   }
 
   // ── ORDERS ─────────────────────────────────────────────────────

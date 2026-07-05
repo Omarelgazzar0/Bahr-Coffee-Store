@@ -704,6 +704,44 @@ select option { background: var(--deep); }
 	letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-lt);
 }
 
+/* ── Top Products list (horizontal bars, no canvas needed) ────────── */
+.top-products-list { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.top-product-row { display: flex; flex-direction: column; gap: 0.25rem; }
+
+.top-product-head {
+	display: flex; justify-content: space-between; align-items: baseline;
+	font-size: 0.82rem;
+}
+.top-product-name { color: var(--text); font-weight: 600; }
+.top-product-meta { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted-lt); }
+
+.top-product-bar-track {
+	height: 6px; border-radius: 99px; background: var(--border);
+	overflow: hidden;
+}
+.top-product-bar-fill {
+	height: 100%; background: var(--white); border-radius: 99px;
+	transition: width 0.3s ease;
+}
+
+/* ── Recurring order due reminders ─────────────────────────────── */
+#subscriptionsDue { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
+
+.sub-due-item {
+	display: flex; justify-content: space-between; align-items: center;
+	gap: 0.75rem; padding: 0.6rem 0.75rem;
+	background: var(--white-dim); border: 1px solid var(--border-lt);
+	border-radius: var(--r-sm);
+}
+.sub-due-item.overdue { border-color: var(--red); background: var(--red-dim); }
+
+.sub-due-info { font-size: 0.82rem; }
+.sub-due-info strong { color: var(--text); }
+.sub-due-info .sub-due-meta { display: block; font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted-lt); margin-top: 0.15rem; }
+
+.sub-create-form { display: flex; flex-direction: column; gap: 0.6rem; padding-top: 0.5rem; border-top: 1px solid var(--border); margin-top: 0.5rem; }
+
 
 /* ── 16. TABLES ────────────────────────────────────────────────────── */
 .table-wrap { overflow-x: auto; }

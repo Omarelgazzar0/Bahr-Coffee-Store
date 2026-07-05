@@ -42,11 +42,12 @@ sbj4IVSWCZKFoG1GepHp9Gc=
 
   // ── Sheet tab names (do not change) ─────────────────────────────
   SHEETS: {
-    ORDERS:      'Orders',
-    CUSTOMERS:   'Customers',
-    ORDER_ITEMS: 'Order_Items',
-    CATALOG:     'Catalog',
-    PRESETS:     'Presets',
+    ORDERS:        'Orders',
+    CUSTOMERS:     'Customers',
+    ORDER_ITEMS:   'Order_Items',
+    CATALOG:       'Catalog',
+    PRESETS:       'Presets',
+    SUBSCRIPTIONS: 'Subscriptions',
   },
 
   // ── Default catalog seeded on first run ──────────────────────────

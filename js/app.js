@@ -10,6 +10,7 @@
 //   ReceiptModal         → printable customer receipt
 //   LoadingScreen        → full-page boot/connecting indicator
 //   AppController        → wires everything together, owns event listeners
+//                           (also handles Presets and Recurring Orders/Subscriptions)
 //
 // Boot sequence:
 //   DOMContentLoaded → AppController.start()
@@ -466,6 +467,7 @@ class AppController {
     this.nameAutocomplete   = new CustomerAutocomplete('custName',   'custNameSuggestions',   'name');
     this.mobileAutocomplete = new CustomerAutocomplete('custMobile', 'custMobileSuggestions', 'mobile');
     this._activePresetName = null; // set when a preset is applied, cleared on manual edit / clear / save
+    this._pendingSubscriptionId = null; // set when a recurring order is loaded, advances its due date on save
   }
 
   // ── Boot sequence ──────────────────────────────────────────────
@@ -484,6 +486,7 @@ class AppController {
       this._wireEvents();
       this._setHeaderMeta();
       await this._renderPresets();
+      await this._renderSubscriptions();
       this.loading.hide();
 
       console.log('[App] ✓ Bahr Coffee Store POS ready.');
@@ -567,6 +570,18 @@ class AppController {
       } else if (deleteBtn) {
         this.deletePreset(deleteBtn.dataset.name);
       }
+    });
+
+    document.getElementById('btnAddSubscription')?.addEventListener('click', () => this._addSubscription());
+    document.getElementById('subscriptionsDue')?.addEventListener('click', e => {
+      const btn = e.target.closest('.sub-load-btn');
+      if (btn) this.loadSubscriptionOrder(parseInt(btn.dataset.id));
+    });
+    document.getElementById('subscriptionsBody')?.addEventListener('click', e => {
+      const loadBtn = e.target.closest('.sub-load-btn');
+      const delBtn  = e.target.closest('.sub-delete-btn');
+      if (loadBtn) this.loadSubscriptionOrder(parseInt(loadBtn.dataset.id));
+      if (delBtn)  this.deleteSubscription(parseInt(delBtn.dataset.id));
     });
   }
 
@@ -709,6 +724,15 @@ class AppController {
       this._clearOrder(false);
       this._activePresetName = null;
 
+      // If this order came from a loaded recurring order, push its due date forward
+      if (this._pendingSubscriptionId != null) {
+        try {
+          await Sheets.advanceSubscription(this._pendingSubscriptionId);
+          await this._renderSubscriptions();
+        } catch (_) { /* non-critical — don't block the receipt on this */ }
+        this._pendingSubscriptionId = null;
+      }
+
     } catch (e) {
       this.toast.show('Save failed: ' + e.message, 'error');
     } finally {
@@ -719,6 +743,7 @@ class AppController {
   _clearOrder(notify = true) {
     Catalog.clearCart();
     this._activePresetName = null;
+    this._pendingSubscriptionId = null;
     ['custName', 'custMobile', 'custAddr', 'orderNotes'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
@@ -837,6 +862,55 @@ class AppController {
               <td><span class="badge badge-teal">${c.order_count}</span></td>
               <td class="mono" style="color:var(--white)">EGP ${Number(c.total_spent).toFixed(2)}</td>
             </tr>`).join('');
+
+      // ── Top Products this month ──────────────────────────────────
+      const now = new Date();
+      const monthPrefix = now.toISOString().slice(0, 7); // 'YYYY-MM'
+      const orderIdsThisMonth = new Set(
+        orders.filter(o => (o.date || '').startsWith(monthPrefix)).map(o => o.id)
+      );
+
+      const allItems = await Sheets._getAllItems();
+      const productTotals = new Map(); // key: name_en|unit → { name_en, unit, qty, revenue }
+
+      allItems
+        .filter(item => orderIdsThisMonth.has(parseInt(item.order_id)))
+        .forEach(item => {
+          const key = `${item.name_en}|${item.unit}`;
+          const qty = parseFloat(item.quantity) || 0;
+          const revenue = parseFloat(item.line_total) || 0;
+          const entry = productTotals.get(key) || { name_en: item.name_en, unit: item.unit, qty: 0, revenue: 0 };
+          entry.qty += qty;
+          entry.revenue += revenue;
+          productTotals.set(key, entry);
+        });
+
+      const topProducts = [...productTotals.values()]
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 5);
+
+      const listEl = document.getElementById('topProductsList');
+      if (listEl) {
+        if (!topProducts.length) {
+          listEl.innerHTML = `<p class="table-empty">No sales yet this month</p>`;
+        } else {
+          const maxRevenue = Math.max(...topProducts.map(p => p.revenue), 1);
+          listEl.innerHTML = topProducts.map(p => {
+            const pct = Math.max(4, (p.revenue / maxRevenue) * 100);
+            const qtyLabel = p.unit === 'kg' ? p.qty.toFixed(2) + ' kg' : `${p.qty} ${p.unit}`;
+            return `
+              <div class="top-product-row">
+                <div class="top-product-head">
+                  <span class="top-product-name">${esc(p.name_en)}</span>
+                  <span class="top-product-meta">${qtyLabel} · EGP ${p.revenue.toFixed(2)}</span>
+                </div>
+                <div class="top-product-bar-track">
+                  <div class="top-product-bar-fill" style="width:${pct}%"></div>
+                </div>
+              </div>`;
+          }).join('');
+        }
+      }
 
     } catch (e) {
       this.toast.show('Dashboard load failed: ' + e.message, 'error');
@@ -1086,6 +1160,122 @@ class AppController {
       if (this._activePresetName === name) this._activePresetName = null;
       await this._renderPresets();
       this.toast.show(`✓ Preset "${name}" deleted`);
+    } catch (e) {
+      this.toast.show('Delete failed: ' + e.message, 'error');
+    }
+  }
+
+  // ── Recurring Orders (subscriptions) ────────────────────────────
+
+  async _renderSubscriptions() {
+    let subs = [];
+    let presets = [];
+    try {
+      [subs, presets] = await Promise.all([Sheets.getAllSubscriptions(), Sheets.getAllPresets()]);
+    } catch (e) {
+      this.toast.show('Could not load recurring orders: ' + e.message, 'error');
+      return;
+    }
+
+    const esc = ReceiptModal.escapeHtml;
+
+    // Populate the preset dropdown in the create-form
+    const select = document.getElementById('subPreset');
+    if (select) {
+      const current = select.value;
+      select.innerHTML = '<option value="">— choose a saved preset —</option>' +
+        presets.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+      select.value = current;
+    }
+
+    // Due / overdue reminders (next_due <= today)
+    const today = new Date().toISOString().split('T')[0];
+    const due = subs.filter(s => s.next_due <= today);
+    const dueEl = document.getElementById('subscriptionsDue');
+    if (dueEl) {
+      dueEl.innerHTML = !due.length ? '' : due.map(s => {
+        const overdue = s.next_due < today;
+        return `
+          <div class="sub-due-item ${overdue ? 'overdue' : ''}">
+            <div class="sub-due-info">
+              <strong>${esc(s.customer_name)}</strong> — ${esc(s.preset_name)}
+              <span class="sub-due-meta">${overdue ? 'Overdue since' : 'Due'} ${s.next_due}</span>
+            </div>
+            <button class="btn btn-primary btn-sm sub-load-btn" data-id="${s.id}">Load Order</button>
+          </div>`;
+      }).join('');
+    }
+
+    // Full list
+    const body = document.getElementById('subscriptionsBody');
+    if (body) {
+      body.innerHTML = !subs.length
+        ? `<tr><td colspan="5" class="table-empty">No recurring orders yet</td></tr>`
+        : subs.map(s => `
+            <tr>
+              <td>${esc(s.customer_name)}<div class="muted" style="font-size:.7rem">${esc(s.customer_mobile || '')}</div></td>
+              <td>${esc(s.preset_name)}</td>
+              <td class="mono">${s.frequency_days}d</td>
+              <td class="mono ${s.next_due <= today ? 'stock-low' : ''}">${s.next_due}</td>
+              <td style="display:flex;gap:.35rem">
+                <button class="btn btn-teal btn-sm sub-load-btn" data-id="${s.id}">Load</button>
+                <button class="btn btn-danger sub-delete-btn" data-id="${s.id}">Delete</button>
+              </td>
+            </tr>`).join('');
+    }
+  }
+
+  async _addSubscription() {
+    const customer_name   = document.getElementById('subName')?.value.trim();
+    const customer_mobile = document.getElementById('subMobile')?.value.trim();
+    const preset_name     = document.getElementById('subPreset')?.value;
+    const frequency_days  = parseInt(document.getElementById('subFrequency')?.value) || 7;
+
+    if (!customer_name)   return this.toast.show('Enter customer name', 'error');
+    if (!preset_name)     return this.toast.show('Choose a preset', 'error');
+
+    try {
+      const nextDue = new Date().toISOString().split('T')[0]; // due immediately by default
+      await Sheets.addSubscription({ customer_name, customer_mobile, preset_name, frequency_days, next_due: nextDue });
+
+      ['subName', 'subMobile'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      document.getElementById('subPreset').value = '';
+
+      await this._renderSubscriptions();
+      this.toast.show(`✓ Recurring order added for ${customer_name}`);
+    } catch (e) {
+      this.toast.show('Failed: ' + e.message, 'error');
+    }
+  }
+
+  /** Fill customer fields + apply the linked preset, ready to review and save. */
+  async loadSubscriptionOrder(id) {
+    try {
+      const subs = await Sheets.getAllSubscriptions();
+      const sub  = subs.find(s => s.id === id);
+      if (!sub) return;
+
+      const nameEl   = document.getElementById('custName');
+      const mobileEl = document.getElementById('custMobile');
+      if (nameEl)   nameEl.value   = sub.customer_name;
+      if (mobileEl) mobileEl.value = sub.customer_mobile || '';
+
+      await this.applyPreset(sub.preset_name);
+      this._pendingSubscriptionId = id; // advanced automatically once this order is saved
+
+      this.router.goTo('pos');
+      this.toast.show(`✓ Loaded recurring order for ${sub.customer_name} — review and Save`);
+    } catch (e) {
+      this.toast.show('Load failed: ' + e.message, 'error');
+    }
+  }
+
+  async deleteSubscription(id) {
+    if (!confirm('Delete this recurring order?')) return;
+    try {
+      await Sheets.deleteSubscription(id);
+      await this._renderSubscriptions();
+      this.toast.show('✓ Recurring order deleted');
     } catch (e) {
       this.toast.show('Delete failed: ' + e.message, 'error');
     }
