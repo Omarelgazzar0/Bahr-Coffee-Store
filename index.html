@@ -52,8 +52,16 @@
                     <section class="card">
                         <div class="card-label">Customer Info</div>
                         <div class="form-row two-col">
-                            <div class="field"><label for="custName">Full Name *</label><input id="custName" type="text" placeholder="e.g. Name"/></div>
-                            <div class="field"><label for="custMobile">Mobile Number</label><input id="custMobile" type="tel" placeholder="+20 1XX XXX XXXX"/></div>
+                            <div class="field" style="position:relative">
+                                <label for="custName">Full Name *</label>
+                                <input id="custName" type="text" placeholder="e.g. Name" autocomplete="off"/>
+                                <div class="cust-suggestions" id="custNameSuggestions"></div>
+                            </div>
+                            <div class="field" style="position:relative">
+                                <label for="custMobile">Mobile Number</label>
+                                <input id="custMobile" type="tel" placeholder="+20 1XX XXX XXXX" autocomplete="off"/>
+                                <div class="cust-suggestions" id="custMobileSuggestions"></div>
+                            </div>
                         </div>
                         <div class="form-row one-col">
                             <div class="field"><label for="custAddr">Address</label><textarea id="custAddr" placeholder="Street, Area, City…"></textarea></div>

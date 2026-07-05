@@ -2,13 +2,14 @@
 // js/app.js — Main Application Controller
 //
 // Classes:
-//   ThemeManager   → dark/light theme toggle, persisted in localStorage
-//   Toast          → bottom notification messages
-//   Router         → page switching (POS / Catalog / Customers / Orders)
-//   CartDrawer     → mobile slide-up cart panel + swipe-to-close
-//   ReceiptModal   → printable customer receipt
-//   LoadingScreen  → full-page boot/connecting indicator
-//   AppController  → wires everything together, owns event listeners
+//   ThemeManager         → dark/light theme toggle, persisted in localStorage
+//   CustomerAutocomplete → saved-customer lookup dropdown for Name/Mobile fields
+//   Toast                → bottom notification messages
+//   Router               → page switching (POS / Catalog / Customers / Orders)
+//   CartDrawer           → mobile slide-up cart panel + swipe-to-close
+//   ReceiptModal         → printable customer receipt
+//   LoadingScreen        → full-page boot/connecting indicator
+//   AppController        → wires everything together, owns event listeners
 //
 // Boot sequence:
 //   DOMContentLoaded → AppController.start()
@@ -52,6 +53,128 @@ class ThemeManager {
         App?._renderDashboardCharts();
       }
     });
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   CLASS: CustomerAutocomplete
+   Wires a text input to a dropdown of matching saved customers.
+   Filters the already-cached customer list client-side (no extra
+   Sheets calls) and fills Name/Mobile/Address when one is picked.
+═══════════════════════════════════════════════════════════════════ */
+class CustomerAutocomplete {
+  constructor(inputId, dropdownId, matchField) {
+    this.input    = document.getElementById(inputId);
+    this.dropdown = document.getElementById(dropdownId);
+    this.matchField = matchField; // 'name' or 'mobile' — which field to filter on
+    this._highlighted = -1;
+  }
+
+  wire() {
+    if (!this.input || !this.dropdown) return;
+
+    this.input.addEventListener('input', () => this._search());
+    this.input.addEventListener('focus', () => {
+      if (this.input.value.trim().length >= 1) this._search();
+    });
+
+    this.input.addEventListener('keydown', e => this._onKeydown(e));
+
+    // Close when clicking anywhere outside this field + dropdown
+    document.addEventListener('click', e => {
+      if (!this.input.contains(e.target) && !this.dropdown.contains(e.target)) {
+        this._close();
+      }
+    });
+  }
+
+  async _search() {
+    const query = this.input.value.trim().toLowerCase();
+    if (query.length < 1) { this._close(); return; }
+
+    let customers = [];
+    try {
+      customers = await Sheets.getAllCustomers();
+    } catch (_) {
+      this._close();
+      return;
+    }
+
+    const matches = customers.filter(c => {
+      const field = this.matchField === 'mobile' ? (c.mobile || '') : (c.name || '');
+      return field.toLowerCase().includes(query);
+    }).slice(0, 6);
+
+    this._render(matches);
+  }
+
+  _render(matches) {
+    if (!matches.length) { this._close(); return; }
+
+    this._highlighted = -1;
+    this.dropdown.innerHTML = matches.map((c, i) => `
+      <div class="cust-suggestion-item" data-idx="${i}">
+        <div class="cust-suggestion-name">${this._esc(c.name)}</div>
+        <div class="cust-suggestion-meta">${this._esc(c.mobile || 'no mobile')} · ${c.order_count} order${c.order_count === 1 ? '' : 's'}</div>
+      </div>`).join('');
+
+    this._matches = matches;
+
+    this.dropdown.querySelectorAll('.cust-suggestion-item').forEach(el => {
+      el.addEventListener('click', () => this._select(matches[parseInt(el.dataset.idx)]));
+    });
+
+    this.dropdown.classList.add('open');
+  }
+
+  _select(customer) {
+    const nameEl   = document.getElementById('custName');
+    const mobileEl = document.getElementById('custMobile');
+    const addrEl   = document.getElementById('custAddr');
+
+    if (nameEl)   nameEl.value   = customer.name   || '';
+    if (mobileEl) mobileEl.value = customer.mobile || '';
+    if (addrEl)   addrEl.value   = customer.address || '';
+
+    this._close();
+    App?.toast.show(`✓ Loaded ${customer.name}`);
+  }
+
+  _onKeydown(e) {
+    if (!this.dropdown.classList.contains('open') || !this._matches?.length) return;
+
+    const items = this.dropdown.querySelectorAll('.cust-suggestion-item');
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      this._highlighted = Math.min(this._highlighted + 1, items.length - 1);
+      this._updateHighlight(items);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      this._highlighted = Math.max(this._highlighted - 1, 0);
+      this._updateHighlight(items);
+    } else if (e.key === 'Enter' && this._highlighted >= 0) {
+      e.preventDefault();
+      this._select(this._matches[this._highlighted]);
+    } else if (e.key === 'Escape') {
+      this._close();
+    }
+  }
+
+  _updateHighlight(items) {
+    items.forEach((el, i) => el.classList.toggle('highlighted', i === this._highlighted));
+  }
+
+  _close() {
+    this.dropdown.classList.remove('open');
+    this.dropdown.innerHTML = '';
+    this._matches = [];
+    this._highlighted = -1;
+  }
+
+  _esc(str) {
+    return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 }
 
@@ -340,6 +463,8 @@ class AppController {
     this.drawer   = new CartDrawer();
     this.receipt  = new ReceiptModal();
     this.loading  = new LoadingScreen();
+    this.nameAutocomplete   = new CustomerAutocomplete('custName',   'custNameSuggestions',   'name');
+    this.mobileAutocomplete = new CustomerAutocomplete('custMobile', 'custMobileSuggestions', 'mobile');
     this._activePresetName = null; // set when a preset is applied, cleared on manual edit / clear / save
   }
 
@@ -392,6 +517,8 @@ class AppController {
     this.router.wireNavButtons();
     this.receipt.wireCloseButtons();
     this.drawer.wireSwipeToClose();
+    this.nameAutocomplete.wire();
+    this.mobileAutocomplete.wire();
 
     // Redraw dashboard charts on resize (canvas pixel size is fixed at draw time)
     let resizeTimer;
