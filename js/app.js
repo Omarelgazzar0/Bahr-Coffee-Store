@@ -981,23 +981,26 @@ class AppController {
       const orders  = await Sheets.getAllOrders();
       const revenue = orders.reduce((sum, o) => sum + o.total, 0);
       const weight  = orders.reduce((sum, o) => sum + (o.total_weight || 0), 0);
+      const taxes   = orders.reduce((sum, o) => sum + (o.tax_amount || 0), 0);
 
       document.getElementById('orderStats').innerHTML = `
         <div class="stat-card"><div class="stat-value">${orders.length}</div><div class="stat-label">Orders</div></div>
         <div class="stat-card"><div class="stat-value">EGP ${Math.round(revenue).toLocaleString('en-EG')}</div><div class="stat-label">Revenue</div></div>
-        <div class="stat-card"><div class="stat-value">${Number(weight).toFixed(2)} kg</div><div class="stat-label">Coffee Sold</div></div>`;
+        <div class="stat-card"><div class="stat-value">${Number(weight).toFixed(2)} kg</div><div class="stat-label">Coffee Sold</div></div>
+        <div class="stat-card"><div class="stat-value">EGP ${taxes.toFixed(2)}</div><div class="stat-label">Total Taxes</div></div>`;
 
       const esc = ReceiptModal.escapeHtml;
       const fmt = ReceiptModal.formatDate;
 
       document.getElementById('orderTableBody').innerHTML = !orders.length
-        ? `<tr><td colspan="8" class="table-empty">No orders yet</td></tr>`
+        ? `<tr><td colspan="9" class="table-empty">No orders yet</td></tr>`
         : orders.map(o => `
             <tr>
               <td><span class="badge badge-amber">${o.invoice}</span></td>
               <td class="muted">${fmt(o.date)}</td>
               <td>${esc(o.customer_name)}</td>
               <td class="mono">${Number(o.total_weight || 0).toFixed(3)} kg</td>
+              <td class="mono muted">EGP ${Number(o.tax_amount || 0).toFixed(2)}</td>
               <td class="mono" style="color:var(--white)">EGP ${Number(o.total).toFixed(2)}</td>
               <td><span class="badge badge-teal">${o.payment}</span></td>
               <td><button class="btn btn-teal btn-sm" onclick="App.viewOrderReceipt(${o.id})">Receipt</button></td>
