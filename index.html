@@ -95,8 +95,16 @@
 
                         <div class="sub-create-form">
                             <div class="form-row two-col">
-                                <div class="field"><label for="subName">Customer Name</label><input id="subName" type="text" placeholder="e.g. Ahmed"/></div>
-                                <div class="field"><label for="subMobile">Mobile</label><input id="subMobile" type="tel" placeholder="+20 1XX XXX XXXX"/></div>
+                                <div class="field" style="position:relative">
+                                    <label for="subName">Customer Name</label>
+                                    <input id="subName" type="text" placeholder="e.g. Ahmed" autocomplete="off"/>
+                                    <div class="cust-suggestions" id="subNameSuggestions"></div>
+                                </div>
+                                <div class="field" style="position:relative">
+                                    <label for="subMobile">Mobile</label>
+                                    <input id="subMobile" type="tel" placeholder="+20 1XX XXX XXXX" autocomplete="off"/>
+                                    <div class="cust-suggestions" id="subMobileSuggestions"></div>
+                                </div>
                             </div>
                             <div class="form-row two-col">
                                 <div class="field"><label for="subPreset">Preset</label>

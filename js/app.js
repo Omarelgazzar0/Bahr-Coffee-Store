@@ -65,10 +65,16 @@ class ThemeManager {
    Sheets calls) and fills Name/Mobile/Address when one is picked.
 ═══════════════════════════════════════════════════════════════════ */
 class CustomerAutocomplete {
-  constructor(inputId, dropdownId, matchField) {
+  constructor(inputId, dropdownId, matchField, targets = {}) {
     this.input    = document.getElementById(inputId);
     this.dropdown = document.getElementById(dropdownId);
     this.matchField = matchField; // 'name' or 'mobile' — which field to filter on
+    // Which fields to fill on selection — defaults to the POS Customer Info fields
+    this.targets = {
+      name:    targets.name    ?? 'custName',
+      mobile:  targets.mobile  ?? 'custMobile',
+      address: targets.address ?? 'custAddr',
+    };
     this._highlighted = -1;
   }
 
@@ -130,12 +136,12 @@ class CustomerAutocomplete {
   }
 
   _select(customer) {
-    const nameEl   = document.getElementById('custName');
-    const mobileEl = document.getElementById('custMobile');
-    const addrEl   = document.getElementById('custAddr');
+    const nameEl   = document.getElementById(this.targets.name);
+    const mobileEl = document.getElementById(this.targets.mobile);
+    const addrEl   = this.targets.address ? document.getElementById(this.targets.address) : null;
 
-    if (nameEl)   nameEl.value   = customer.name   || '';
-    if (mobileEl) mobileEl.value = customer.mobile || '';
+    if (nameEl)   nameEl.value   = customer.name    || '';
+    if (mobileEl) mobileEl.value = customer.mobile  || '';
     if (addrEl)   addrEl.value   = customer.address || '';
 
     this._close();
@@ -466,6 +472,8 @@ class AppController {
     this.loading  = new LoadingScreen();
     this.nameAutocomplete   = new CustomerAutocomplete('custName',   'custNameSuggestions',   'name');
     this.mobileAutocomplete = new CustomerAutocomplete('custMobile', 'custMobileSuggestions', 'mobile');
+    this.subNameAutocomplete   = new CustomerAutocomplete('subName',   'subNameSuggestions',   'name',   { name: 'subName', mobile: 'subMobile', address: null });
+    this.subMobileAutocomplete = new CustomerAutocomplete('subMobile', 'subMobileSuggestions', 'mobile', { name: 'subName', mobile: 'subMobile', address: null });
     this._activePresetName = null; // set when a preset is applied, cleared on manual edit / clear / save
     this._pendingSubscriptionId = null; // set when a recurring order is loaded, advances its due date on save
   }
@@ -522,6 +530,8 @@ class AppController {
     this.drawer.wireSwipeToClose();
     this.nameAutocomplete.wire();
     this.mobileAutocomplete.wire();
+    this.subNameAutocomplete.wire();
+    this.subMobileAutocomplete.wire();
 
     // Redraw dashboard charts on resize (canvas pixel size is fixed at draw time)
     let resizeTimer;

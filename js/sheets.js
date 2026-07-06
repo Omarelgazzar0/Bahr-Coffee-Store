@@ -343,13 +343,12 @@ class SheetsAPI {
     this._invalidate(this.SH.CATALOG);
   }
 
-  /** Add `amount` to an item's stock (used for restocking). Set stock to a number if it was untracked. */
-  async restockItem(id, amount) {
+  /** Set an item's stock to an exact value (overwrites whatever was there before). */
+  async setStock(id, value) {
     const all = await this.getCatalog();
     const idx = all.findIndex(i => i.id === id);
     if (idx === -1) throw new Error('Item not found');
-    const current = all[idx].stock ?? 0;
-    const next = Math.max(0, current + parseFloat(amount));
+    const next = Math.max(0, parseFloat(value));
     await this.client.updateCell(this.SH.CATALOG, `H${idx + 2}`, next);
     this._invalidate(this.SH.CATALOG);
     return next;

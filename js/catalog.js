@@ -254,7 +254,7 @@ class CatalogManager {
             <td>${stockDisplay}</td>
             <td><span class="badge ${item.active ? 'badge-teal' : 'badge-coral'}">${item.active ? 'Active' : 'Archived'}</span></td>
             <td style="display:flex;gap:.35rem;flex-wrap:wrap">
-            <button class="btn btn-teal btn-sm" onclick="Catalog.promptRestock(${item.id})">Restock</button>
+            <button class="btn btn-teal btn-sm" onclick="Catalog.promptRestock(${item.id})">Set Stock</button>
             <button class="btn btn-teal btn-sm" onclick="Catalog.toggleItem(${item.id})">${item.active ? 'Archive' : 'Restore'}</button>
             <button class="btn btn-danger" onclick="Catalog.deleteItem(${item.id})">Delete</button>
             </td>
@@ -263,15 +263,17 @@ class CatalogManager {
 
     /** Ask how much stock to add, then persist it. */
     async promptRestock(id) {
-        const amount = prompt('Add how much stock? (enter a negative number to remove stock)');
+        const item = this._items.find(i => i.id === id) ?? (await this.sheets.getCatalog()).find(i => i.id === id);
+        const current = item?.stock ?? 0;
+        const amount = prompt(`Set new stock level (current: ${current}):`, current);
         if (amount === null || amount.trim() === '') return;
         const parsed = parseFloat(amount);
-        if (isNaN(parsed)) { App?.toast.show('Enter a valid number', 'error'); return; }
+        if (isNaN(parsed) || parsed < 0) { App?.toast.show('Enter a valid, non-negative number', 'error'); return; }
         try {
-            const newStock = await this.sheets.restockItem(id, parsed);
+            const newStock = await this.sheets.setStock(id, parsed);
             await this.buildCatalogTable();
             await this.load();
-            App?.toast.show(`✓ Stock updated → ${newStock}`);
+            App?.toast.show(`✓ Stock set to ${newStock}`);
         } catch (e) { App?.toast.show(e.message, 'error'); }
     }
 
