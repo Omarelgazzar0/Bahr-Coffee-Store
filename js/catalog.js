@@ -256,7 +256,7 @@ class CatalogManager {
             <td style="display:flex;gap:.35rem;flex-wrap:wrap">
             <button class="btn btn-teal btn-sm" onclick="Catalog.promptRestock(${item.id})">Set Stock</button>
             <button class="btn btn-teal btn-sm" onclick="Catalog.toggleItem(${item.id})">${item.active ? 'Archive' : 'Restore'}</button>
-            <button class="btn btn-danger" onclick="Catalog.deleteItem(${item.id})">Delete</button>
+            <button class="btn btn-danger btn-sm" onclick="Catalog.deleteItem(${item.id})">Delete</button>
             </td>
         </tr>`;
     }

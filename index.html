@@ -195,7 +195,7 @@
                             </select>
                         </div>
                     </div>
-                    <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.75rem">
+                    <div class="form-row four-col">
                         <div class="field"><label for="newItemPrice">Price (EGP per unit)</label><input id="newItemPrice" type="number" min="0" step="1" placeholder="440"/></div>
                         <div class="field"><label for="newItemUnit">Unit</label>
                             <select id="newItemUnit">
@@ -256,12 +256,11 @@
                 </section>
                 <section class="card">
                     <div class="card-label">
-                        Customer Database
-                        <!-- Export to CSV — opens cleanly in Excel and Access -->
-                        <button class="btn btn-primary btn-sm export-csv-btn"
-                                style="margin-left:auto;width:auto">
-                          📥 Export to Excel / Access
-                        </button>
+                        <span class="card-label-text">Customer Database</span>
+                        <span class="card-label-actions">
+                            <!-- Export to CSV — opens cleanly in Excel and Access -->
+                            <button class="btn btn-primary btn-sm export-csv-btn">📥 Export to Excel / Access</button>
+                        </span>
                     </div>
                     <div class="table-wrap">
                         <table>
@@ -279,11 +278,10 @@
                 <div class="stats-row" id="orderStats"></div>
                 <section class="card">
                     <div class="card-label">
-                        Order History
-                        <button class="btn btn-primary btn-sm export-csv-btn"
-                                style="margin-left:auto;width:auto">
-                            📥 Export to Excel / Access
-                        </button>
+                        <span class="card-label-text">Order History</span>
+                        <span class="card-label-actions">
+                            <button class="btn btn-primary btn-sm export-csv-btn">📥 Export to Excel / Access</button>
+                        </span>
                     </div>
                     <div class="table-wrap">
                         <table>
