@@ -51,18 +51,22 @@ sbj4IVSWCZKFoG1GepHp9Gc=
   },
 
   // ── Default catalog seeded on first run ──────────────────────────
-  // ── Low-stock warning threshold (in the item's own unit) ─────────
+  // ── Low-stock warning thresholds ──────────────────────────────────
+  // For items sold by weight (unit: 'kg'), stock is tracked in GRAMS —
+  // this threshold is also in grams. For piece/pack items it's a plain count.
+  LOW_STOCK_THRESHOLD_G: 500,
   LOW_STOCK_THRESHOLD: 5,
 
   DEFAULT_CATALOG: [
     // id, name_ar, name_en, type, price, unit, active, stock
-    [1, 'حبشي هرهري',     'Ethiopian Harari',   'coffee',     440, 'kg',    1, 25],
-    [2, 'برازيلي سانتوس', 'Brazilian Santos',   'coffee',     580, 'kg',    1, 25],
-    [3, 'إندونيسي',        'Indonesian',         'coffee',     300, 'kg',    1, 25],
-    [4, 'هندي أرابيكا',    'Indian Arabica',     'coffee',     700, 'kg',    1, 25],
+    // Stock for 'kg' items is stored in GRAMS (e.g. 25000 = 25 kg)
+    [1, 'حبشي هرهري',     'Ethiopian Harari',   'coffee',     440, 'kg',    1, 25000],
+    [2, 'برازيلي سانتوس', 'Brazilian Santos',   'coffee',     580, 'kg',    1, 25000],
+    [3, 'إندونيسي',        'Indonesian',         'coffee',     300, 'kg',    1, 25000],
+    [4, 'هندي أرابيكا',    'Indian Arabica',     'coffee',     700, 'kg',    1, 25000],
     [5, 'باكيت ٢٥٠ جم',    '250g Pack',          'package',     15, 'piece', 1, 100],
     [6, 'باكيت ٥٠٠ جم',    '500g Pack',          'package',     25, 'piece', 1, 100],
-    [7, 'سكر',             'Sugar',              'ingredient',  30, 'kg',    1, 20],
-    [8, 'هيل',             'Cardamom',           'ingredient', 250, 'kg',    1, 20],
+    [7, 'سكر',             'Sugar',              'ingredient',  30, 'kg',    1, 20000],
+    [8, 'هيل',             'Cardamom',           'ingredient', 250, 'kg',    1, 20000],
   ],
 };

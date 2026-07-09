@@ -112,6 +112,17 @@ class CatalogManager {
         this.TYPE_BADGE = { coffee: 'badge-amber', package: 'badge-teal', ingredient: 'badge-violet' };
     }
 
+    /** Stock is tracked in grams for anything sold by the kilogram. */
+    _stockUnit(item) {
+        return item.unit === 'kg' ? 'g' : item.unit;
+    }
+
+    _stockThreshold(item) {
+        return item.unit === 'kg'
+            ? (CONFIG.LOW_STOCK_THRESHOLD_G ?? 500)
+            : (CONFIG.LOW_STOCK_THRESHOLD ?? 5);
+    }
+
     // ── Loading ────────────────────────────────────────────────────
 
     /** Fetch active catalog items and render the POS selection grid. */
@@ -160,10 +171,11 @@ class CatalogManager {
         const qty  = this.cart.get(item.id);
         const step = Cart.stepFor(item.unit);
         const val  = qty > 0 ? (item.unit === 'kg' ? qty.toFixed(3) : qty) : '';
-        const threshold = CONFIG.LOW_STOCK_THRESHOLD ?? 5;
+        const stockUnit = this._stockUnit(item);
+        const threshold = this._stockThreshold(item);
         const stockBadge = item.stock == null ? '' : `
             <span class="stock-badge ${item.stock <= threshold ? 'stock-low' : ''}">
-                ${item.stock <= threshold ? '⚠ ' : ''}${item.stock} ${item.unit} left
+                ${item.stock <= threshold ? '⚠ ' : ''}${item.stock} ${stockUnit} left
             </span>`;
 
         return `
@@ -238,10 +250,11 @@ class CatalogManager {
         const badge = this.TYPE_BADGE[item.type] ?? 'badge-sky';
         const label = this.TYPE_LABEL[item.type] ?? item.type;
 
-        const threshold = CONFIG.LOW_STOCK_THRESHOLD ?? 5;
+        const stockUnit = this._stockUnit(item);
+        const threshold = this._stockThreshold(item);
         const stockDisplay = item.stock == null
             ? '<span class="muted">—</span>'
-            : `<span class="badge ${item.stock <= threshold ? 'badge-coral' : 'badge-teal'}">${item.stock} ${item.unit}</span>`;
+            : `<span class="badge ${item.stock <= threshold ? 'badge-coral' : 'badge-teal'}">${item.stock} ${stockUnit}</span>`;
 
         return `
         <tr style="${item.active ? '' : 'opacity:.45'}">
@@ -261,11 +274,12 @@ class CatalogManager {
         </tr>`;
     }
 
-    /** Ask how much stock to add, then persist it. */
+    /** Ask for the new stock level (grams for kg-priced items), then persist it. */
     async promptRestock(id) {
         const item = this._items.find(i => i.id === id) ?? (await this.sheets.getCatalog()).find(i => i.id === id);
         const current = item?.stock ?? 0;
-        const amount = prompt(`Set new stock level (current: ${current}):`, current);
+        const unitLabel = this._stockUnit(item ?? { unit: '' });
+        const amount = prompt(`Set new stock level in ${unitLabel} (current: ${current} ${unitLabel}):`, current);
         if (amount === null || amount.trim() === '') return;
         const parsed = parseFloat(amount);
         if (isNaN(parsed) || parsed < 0) { App?.toast.show('Enter a valid, non-negative number', 'error'); return; }
@@ -273,7 +287,7 @@ class CatalogManager {
             const newStock = await this.sheets.setStock(id, parsed);
             await this.buildCatalogTable();
             await this.load();
-            App?.toast.show(`✓ Stock set to ${newStock}`);
+            App?.toast.show(`✓ Stock set to ${newStock} ${unitLabel}`);
         } catch (e) { App?.toast.show(e.message, 'error'); }
     }
 

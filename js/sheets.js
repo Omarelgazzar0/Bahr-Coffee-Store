@@ -266,6 +266,39 @@ class SheetsAPI {
     if (catalogRows.length <= 1) {
       await this.client.appendRows(this.SH.CATALOG, this.config.DEFAULT_CATALOG);
     }
+
+    await this._migrateStockToGrams();
+  }
+
+  /**
+   * One-time migration: stock for 'kg'-priced items used to be stored
+   * in kilograms; it's now stored in grams (×1000) so restocking and
+   * low-stock warnings can use gram-level precision. Guarded by a
+   * marker cell (Catalog!J1) so it only ever runs once per spreadsheet.
+   */
+  async _migrateStockToGrams() {
+    const MARKER = 'stock_unit_g_v1';
+    let marker = '';
+    try {
+      const cell = await this.client.readRange(this.SH.CATALOG, 'J1:J1');
+      marker = cell?.[0]?.[0] || '';
+    } catch (_) { /* J1 not set yet — proceed with migration */ }
+
+    if (marker === MARKER) return; // already migrated
+
+    const rows = await this._safeReadRange(this.SH.CATALOG);
+    const items = this._rowsToObjects(rows, this.SH.CATALOG);
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.unit === 'kg' && item.stock !== '' && item.stock != null) {
+        const grams = parseFloat(item.stock) * 1000;
+        await this.client.updateCell(this.SH.CATALOG, `H${i + 2}`, grams);
+      }
+    }
+
+    await this.client.updateCell(this.SH.CATALOG, 'J1', MARKER);
+    this._invalidate(this.SH.CATALOG);
   }
 
   async _isSheetEmpty(sheetName) {
@@ -354,7 +387,9 @@ class SheetsAPI {
     return next;
   }
 
-  /** Reduce stock for every catalog item in a sold cart, clamped at 0. */
+  /** Reduce stock for every catalog item in a sold cart, clamped at 0.
+   *  Stock for 'kg'-priced items is tracked in GRAMS, so quantities sold
+   *  in kg are converted (× 1000) before being subtracted. */
   async _decrementStock(cart) {
     const soldByCatalogId = new Map();
     for (const item of cart) {
@@ -367,7 +402,9 @@ class SheetsAPI {
     for (const [catalogId, qtySold] of soldByCatalogId) {
       const idx = all.findIndex(i => i.id === catalogId);
       if (idx === -1 || all[idx].stock == null) continue; // not stock-tracked
-      const next = Math.max(0, all[idx].stock - qtySold);
+      const item = all[idx];
+      const soldInStockUnit = item.unit === 'kg' ? qtySold * 1000 : qtySold;
+      const next = Math.max(0, item.stock - soldInStockUnit);
       await this.client.updateCell(this.SH.CATALOG, `H${idx + 2}`, next);
     }
     this._invalidate(this.SH.CATALOG);
