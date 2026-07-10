@@ -123,6 +123,14 @@ class CatalogManager {
             : (CONFIG.LOW_STOCK_THRESHOLD ?? 5);
     }
 
+    /** Total EGP value of an item's current stock (price is always per its selling unit). */
+    _stockValue(item) {
+        if (item.stock == null) return null;
+        // Stock is stored in grams for kg-priced items, so convert back to kg for the price math
+        const qtyInSellingUnit = item.unit === 'kg' ? item.stock / 1000 : item.stock;
+        return qtyInSellingUnit * item.price;
+    }
+
     // ── Loading ────────────────────────────────────────────────────
 
     /** Fetch active catalog items and render the POS selection grid. */
@@ -242,8 +250,49 @@ class CatalogManager {
         if (!tbody) return;
 
         tbody.innerHTML = !all.length
-        ? `<tr><td colspan="9" class="table-empty">No items yet</td></tr>`
+        ? `<tr><td colspan="10" class="table-empty">No items yet</td></tr>`
         : all.map(item => this._tableRowHTML(item)).join('');
+
+        this._renderCatalogStats(all);
+    }
+
+    /** Summary stat cards: total coffee currently stocked (kg) and its total EGP value. */
+    _renderCatalogStats(all) {
+        const statsEl = document.getElementById('catalogStats');
+        if (!statsEl) return;
+
+        const coffeeItems = all.filter(i => i.type === 'coffee' && i.stock != null);
+
+        // Stock is stored in grams for kg-priced items — convert back to kg for display
+        const totalCoffeeKg = coffeeItems.reduce((sum, i) => {
+            const kg = i.unit === 'kg' ? i.stock / 1000 : 0;
+            return sum + kg;
+        }, 0);
+
+        const totalCoffeeValue = coffeeItems.reduce((sum, i) => {
+            const value = this._stockValue(i);
+            return sum + (value ?? 0);
+        }, 0);
+
+        // Also a whole-catalog total value (every stocked item, any type)
+        const totalCatalogValue = all.reduce((sum, i) => {
+            const value = this._stockValue(i);
+            return sum + (value ?? 0);
+        }, 0);
+
+        statsEl.innerHTML = `
+            <div class="stat-card">
+                <div class="stat-value">${totalCoffeeKg.toFixed(2)} kg</div>
+                <div class="stat-label">Coffee In Stock</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">EGP ${totalCoffeeValue.toLocaleString('en-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div class="stat-label">Coffee Stock Value</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">EGP ${totalCatalogValue.toLocaleString('en-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div class="stat-label">Total Catalog Value</div>
+            </div>`;
     }
 
     _tableRowHTML(item) {
@@ -256,6 +305,11 @@ class CatalogManager {
             ? '<span class="muted">—</span>'
             : `<span class="badge ${item.stock <= threshold ? 'badge-coral' : 'badge-teal'}">${item.stock} ${stockUnit}</span>`;
 
+        const stockValue = this._stockValue(item);
+        const stockValueDisplay = stockValue == null
+            ? '<span class="muted">—</span>'
+            : `<span class="mono">EGP ${stockValue.toLocaleString('en-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`;
+
         return `
         <tr style="${item.active ? '' : 'opacity:.45'}">
             <td><span class="badge badge-amber">${item.id}</span></td>
@@ -265,6 +319,7 @@ class CatalogManager {
             <td class="mono">EGP ${Number(item.price).toLocaleString('en-EG')}</td>
             <td class="mono">${item.unit}</td>
             <td>${stockDisplay}</td>
+            <td>${stockValueDisplay}</td>
             <td><span class="badge ${item.active ? 'badge-teal' : 'badge-coral'}">${item.active ? 'Active' : 'Archived'}</span></td>
             <td style="display:flex;gap:.35rem;flex-wrap:wrap">
             <button class="btn btn-teal btn-sm" onclick="Catalog.promptRestock(${item.id})">Set Stock</button>
