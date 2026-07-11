@@ -562,6 +562,7 @@ class AppController {
     document.getElementById('btnSaveOrder')?.addEventListener('click', () => this._saveOrder());
     document.getElementById('btnClearOrder')?.addEventListener('click', () => this._clearOrder(true));
     document.getElementById('btnAddItem')?.addEventListener('click', () => this._addCatalogItem());
+    document.getElementById('btnCancelEditItem')?.addEventListener('click', () => Catalog.cancelEdit());
     document.getElementById('cartFab')?.addEventListener('click', () => this.drawer.toggle());
 
     document.querySelectorAll('.export-csv-btn').forEach(btn =>
@@ -776,15 +777,23 @@ class AppController {
     if (!name_en) return this.toast.show('English name required', 'error');
     if (isNaN(price) || price < 0) return this.toast.show('Valid price required', 'error');
 
+    const editingId = Catalog.editingId;
+
     try {
-      await Sheets.addCatalogItem({ name_ar, name_en, type, price, unit, stock });
-      ['newItemNameAr', 'newItemNameEn', 'newItemPrice', 'newItemStock'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-      });
+      if (editingId != null) {
+        await Sheets.updateCatalogItem(editingId, { name_ar, name_en, type, price, unit });
+        this.toast.show('✓ Item updated');
+        Catalog.cancelEdit();
+      } else {
+        await Sheets.addCatalogItem({ name_ar, name_en, type, price, unit, stock });
+        this.toast.show('✓ Item added');
+        ['newItemNameAr', 'newItemNameEn', 'newItemPrice', 'newItemStock'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+      }
       await Catalog.buildCatalogTable();
       await Catalog.load();
-      this.toast.show('✓ Item added');
     } catch (e) {
       this.toast.show('Failed: ' + e.message, 'error');
     }

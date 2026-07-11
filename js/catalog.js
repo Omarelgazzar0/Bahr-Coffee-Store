@@ -107,6 +107,7 @@ class CatalogManager {
         this.sheets = sheetsAPI;
         this.cart   = new Cart();
         this._items = []; // active catalog items, refreshed on load()
+        this.editingId = null; // set while the Add-Item form is in edit mode
 
         this.TYPE_LABEL = { coffee: '☕ Coffee', package: '📦 Package', ingredient: '🧂 Ingredient' };
         this.TYPE_BADGE = { coffee: 'badge-amber', package: 'badge-teal', ingredient: 'badge-violet' };
@@ -322,6 +323,7 @@ class CatalogManager {
             <td>${stockValueDisplay}</td>
             <td><span class="badge ${item.active ? 'badge-teal' : 'badge-coral'}">${item.active ? 'Active' : 'Archived'}</span></td>
             <td style="display:flex;gap:.35rem;flex-wrap:wrap">
+            <button class="btn btn-teal btn-sm" onclick="Catalog.startEdit(${item.id})">Edit</button>
             <button class="btn btn-teal btn-sm" onclick="Catalog.promptRestock(${item.id})">Set Stock</button>
             <button class="btn btn-teal btn-sm" onclick="Catalog.toggleItem(${item.id})">${item.active ? 'Archive' : 'Restore'}</button>
             <button class="btn btn-danger btn-sm" onclick="Catalog.deleteItem(${item.id})">Delete</button>
@@ -344,6 +346,58 @@ class CatalogManager {
             await this.load();
             App?.toast.show(`✓ Stock set to ${newStock} ${unitLabel}`);
         } catch (e) { App?.toast.show(e.message, 'error'); }
+    }
+
+    /** Populate the Add-Item form with an existing item's data and switch it into edit mode. */
+    async startEdit(id) {
+        const item = (await this.sheets.getCatalog(false)).find(i => i.id === id);
+        if (!item) { App?.toast.show('Item not found', 'error'); return; }
+
+        document.getElementById('newItemNameAr').value = item.name_ar;
+        document.getElementById('newItemNameEn').value = item.name_en;
+        document.getElementById('newItemType').value   = item.type;
+        document.getElementById('newItemPrice').value  = item.price;
+        document.getElementById('newItemUnit').value   = item.unit;
+
+        this.editingId = id;
+
+        const label = document.getElementById('catalogFormLabel');
+        if (label) label.textContent = `Editing: ${item.name_en}`;
+
+        const stockField = document.getElementById('newItemStockField');
+        if (stockField) stockField.style.display = 'none'; // stock is edited via "Set Stock" instead
+
+        const addBtn = document.getElementById('btnAddItem');
+        if (addBtn) addBtn.textContent = '💾 Save Changes';
+
+        const cancelBtn = document.getElementById('btnCancelEditItem');
+        if (cancelBtn) cancelBtn.style.display = '';
+
+        document.getElementById('newItemNameAr')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    /** Reset the Add-Item form back to its normal "add new item" state. */
+    cancelEdit() {
+        this.editingId = null;
+
+        ['newItemNameAr', 'newItemNameEn', 'newItemPrice', 'newItemStock'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        document.getElementById('newItemType').value = 'coffee';
+        document.getElementById('newItemUnit').value = 'kg';
+
+        const label = document.getElementById('catalogFormLabel');
+        if (label) label.textContent = 'Add New Item to Catalog';
+
+        const stockField = document.getElementById('newItemStockField');
+        if (stockField) stockField.style.display = '';
+
+        const addBtn = document.getElementById('btnAddItem');
+        if (addBtn) addBtn.textContent = '＋ Add Item';
+
+        const cancelBtn = document.getElementById('btnCancelEditItem');
+        if (cancelBtn) cancelBtn.style.display = 'none';
     }
 
     async toggleItem(id) {

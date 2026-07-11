@@ -183,7 +183,7 @@
         <div id="page-catalog" class="page">
             <div class="inner-page">
                 <section class="card">
-                    <div class="card-label">Add New Item to Catalog</div>
+                    <div class="card-label" id="catalogFormLabel">Add New Item to Catalog</div>
                     <div class="form-row three-col">
                         <div class="field"><label for="newItemNameAr">Name (Arabic)</label><input id="newItemNameAr" type="text" placeholder="حبشي هرهري" dir="rtl"/></div>
                         <div class="field"><label for="newItemNameEn">Name (English)</label><input id="newItemNameEn" type="text" placeholder="Ethiopian Harari"/></div>
@@ -205,9 +205,10 @@
                                 <option value="pack">pack</option>
                             </select>
                         </div>
-                        <div class="field"><label for="newItemStock">Initial Stock (optional)</label><input id="newItemStock" type="number" min="0" step="1" placeholder="grams if unit=kg, e.g. 25000"/></div>
-                        <div class="field" style="display:flex;align-items:flex-end">
+                        <div class="field" id="newItemStockField"><label for="newItemStock">Initial Stock (optional)</label><input id="newItemStock" type="number" min="0" step="1" placeholder="grams if unit=kg, e.g. 25000"/></div>
+                        <div class="field" style="display:flex;align-items:flex-end;gap:.5rem">
                             <button class="btn btn-primary" id="btnAddItem" style="width:100%">＋ Add Item</button>
+                            <button class="btn btn-ghost" id="btnCancelEditItem" style="width:auto;display:none">Cancel</button>
                         </div>
                     </div>
                   </section>

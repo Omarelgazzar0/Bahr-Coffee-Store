@@ -162,6 +162,15 @@ class SheetsClient {
     await this._request(url, { method: 'PUT', body: JSON.stringify({ values: [[value]] }) });
   }
 
+  /** Overwrite a contiguous range of cells in one row, e.g. updateRow('Catalog', 5, 'B', ['name','en',...]). */
+  async updateRow(sheetName, rowNumber, startColumn, values) {
+    const endColumn = String.fromCharCode(startColumn.charCodeAt(0) + values.length - 1);
+    const range = `${startColumn}${rowNumber}:${endColumn}${rowNumber}`;
+    const url = `${this.base}/values/${encodeURIComponent(sheetName + '!' + range)}`
+              + `?valueInputOption=RAW`;
+    await this._request(url, { method: 'PUT', body: JSON.stringify({ values: [values] }) });
+  }
+
   /** Delete one row (1-based row number, including the header row). */
   async deleteRow(sheetName, rowNumber) {
     const sheetId = await this._numericSheetId(sheetName);
@@ -366,6 +375,18 @@ class SheetsAPI {
     await this.client.appendRows(this.SH.CATALOG, [[id, name_ar, name_en, type, parseFloat(price), unit, 1, stockVal]]);
     this._invalidate(this.SH.CATALOG);
     return { id, name_ar, name_en, type, price: parseFloat(price), unit, active: 1, stock: stockVal === '' ? null : stockVal };
+  }
+
+  /** Overwrite name/type/price/unit for an existing catalog item (stock and active flag are untouched). */
+  async updateCatalogItem(id, { name_ar, name_en, type, price, unit }) {
+    const all = await this.getCatalog();
+    const idx = all.findIndex(i => i.id === id);
+    if (idx === -1) throw new Error('Item not found');
+
+    await this.client.updateRow(this.SH.CATALOG, idx + 2, 'B', [
+      name_ar, name_en, type, parseFloat(price), unit,
+    ]);
+    this._invalidate(this.SH.CATALOG);
   }
 
   async toggleCatalogItem(id) {
