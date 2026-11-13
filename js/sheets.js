@@ -624,20 +624,32 @@ class SheetsAPI {
     mobile  = (mobile  || '').trim();
     address = (address || '').trim();
 
-    const customers = await this.getAllCustomers();
+    // Read RAW sheet rows (not the reversed/aggregated list) so that
+    // array index + 2 is always the true sheet row number.
+    const raw = this._rowsToObjects(await this.client.readRange(this.SH.CUSTOMERS), this.SH.CUSTOMERS);
+    const sameName = c => (c.name || '').trim().toLowerCase() === name.toLowerCase();
 
-    if (mobile) {
-      const existing = customers.find(c => c.mobile === mobile);
-      if (existing) {
-        const id  = parseInt(existing.id);
-        const row = customers.indexOf(existing) + 2;
-        await this.client.updateCell(this.SH.CUSTOMERS, `B${row}`, name);
-        await this.client.updateCell(this.SH.CUSTOMERS, `D${row}`, address);
-        this._invalidate(this.SH.CUSTOMERS);
-        return id;
-      }
+    // 1) Match by mobile. 2) Otherwise match by name — but only a record that
+    // has no mobile yet (so two different people sharing a name, each with
+    // their own mobile, are never merged). With no mobile entered, match by name.
+    let idx = mobile ? raw.findIndex(c => (c.mobile || '').trim() === mobile) : -1;
+    if (idx === -1) {
+      idx = raw.findIndex(c => sameName(c) && (!mobile || !(c.mobile || '').trim()));
     }
 
+    if (idx !== -1) {
+      const existing = raw[idx];
+      // Update, but never blank out data we already have
+      await this.client.updateRow(this.SH.CUSTOMERS, idx + 2, 'B', [
+        name,
+        mobile  || existing.mobile  || '',
+        address || existing.address || '',
+      ]);
+      this._invalidate(this.SH.CUSTOMERS);
+      return parseInt(existing.id);
+    }
+
+    const customers = await this.getAllCustomers();
     const id = this._nextId(customers);
     await this.client.appendRows(this.SH.CUSTOMERS, [[id, name, mobile, address, this._timestamp()]]);
     this._invalidate(this.SH.CUSTOMERS);
