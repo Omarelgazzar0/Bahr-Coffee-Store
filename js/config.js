@@ -60,6 +60,5 @@ sbj4IVSWCZKFoG1GepHp9Gc=
   DEFAULT_CATALOG: [
     // id, name_ar, name_en, type, price, unit, active, stock
     // Stock for 'kg' items is stored in GRAMS (e.g. 25000 = 25 kg)
-    [1, 'حبشي هرهري',     'Ethiopian Harari',   'coffee',     440, 'kg',    1, 0]
   ],
 };
