@@ -842,7 +842,8 @@ class AppController {
       const totalWeight  = orders.reduce((sum, o) => sum + (o.total_weight || 0), 0);
       const avgOrder     = orders.length ? totalRevenue / orders.length : 0;
 
-      document.getElementById('dashboardStats').innerHTML = `
+      const statsEl = document.getElementById('dashboardStats');
+      if (statsEl) statsEl.innerHTML = `
         <div class="stat-card"><div class="stat-value">${orders.length}</div><div class="stat-label">Total Orders</div></div>
         <div class="stat-card"><div class="stat-value">EGP ${Math.round(totalRevenue).toLocaleString('en-EG')}</div><div class="stat-label">Total Revenue</div></div>
         <div class="stat-card"><div class="stat-value">${Number(totalWeight).toFixed(2)} kg</div><div class="stat-label">Coffee Sold</div></div>
@@ -872,7 +873,8 @@ class AppController {
       const top = [...customers].sort((a, b) => b.total_spent - a.total_spent).slice(0, 5);
       const esc = ReceiptModal.escapeHtml;
 
-      document.getElementById('topCustomersBody').innerHTML = !top.length
+      const topCustEl = document.getElementById('topCustomersBody');
+      if (topCustEl) topCustEl.innerHTML = !top.length
         ? `<tr><td colspan="4" class="table-empty">No customers yet</td></tr>`
         : top.map((c, i) => `
             <tr>
@@ -882,7 +884,8 @@ class AppController {
               <td class="mono" style="color:var(--white)">EGP ${Number(c.total_spent).toFixed(2)}</td>
             </tr>`).join('');
 
-      // ── Top Products this month ──────────────────────────────────
+      // ── Top Products this month (skipped if its card is hidden) ──
+      if (document.getElementById('topProductsList')) {
       const now = new Date();
       const monthPrefix = now.toISOString().slice(0, 7); // 'YYYY-MM'
       const orderIdsThisMonth = new Set(
@@ -930,6 +933,7 @@ class AppController {
           }).join('');
         }
       }
+      } // end: Top Products guard
 
     } catch (e) {
       this.toast.show('Dashboard load failed: ' + e.message, 'error');
