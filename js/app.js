@@ -1265,7 +1265,8 @@ class AppController {
       await Sheets.addSubscription({ customer_name, customer_mobile, preset_name, frequency_days, next_due: nextDue });
 
       ['subName', 'subMobile'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-      document.getElementById('subPreset').value = '';
+      const subPresetEl = document.getElementById('subPreset');
+      if (subPresetEl) subPresetEl.value = '';
 
       await this._renderSubscriptions();
       this.toast.show(`✓ Recurring order added for ${customer_name}`);
